@@ -32,7 +32,7 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
     @Transactional
     @Query("""
             UPDATE User u
-            SET u.username = :name,
+            SET u.username = :username,
                 u.surname = :surname,
                 u.birthDate = :birthDate,
                 u.email = :email,
@@ -40,7 +40,7 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
             WHERE u.id = :id
             """)
     int updateUserDetails(@Param("id") UUID id,
-                          @Param("name") String name,
+                          @Param("username") String name,
                           @Param("surname") String surname,
                           @Param("birthDate") LocalDate birthDate,
                           @Param("email") String email);
