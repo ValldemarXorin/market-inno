@@ -20,7 +20,7 @@ import java.util.UUID;
 public class PaymentCardController {
     private final PaymentCardService paymentCardService;
 
-    @PostMapping("/api/v1/users/{userId}/cards")
+    @PostMapping("/users/{userId}/cards")
     public ResponseEntity<PaymentCardResponse> createPaymentCard(
             @PathVariable UUID userId,
             @Valid @RequestBody CreatePaymentCardRequest createPaymentCardRequest) {
@@ -30,19 +30,19 @@ public class PaymentCardController {
                 .body(paymentCardResponseCreated);
     }
 
-    @GetMapping("/api/v1/users/{userId}/cards")
+    @GetMapping("/users/{userId}/cards")
     public ResponseEntity<Page<PaymentCardResponse>> getPaymentCardsByUserId(
             @PathVariable UUID userId,
             Pageable pageable) {
         return ResponseEntity.ok(paymentCardService.getPaymentCardsByUserId(userId, pageable));
     }
 
-    @GetMapping("/api/v1/cards/{id}")
+    @GetMapping("/cards/{id}")
     public ResponseEntity<PaymentCardResponse> getPaymentCardById(@PathVariable UUID id) {
         return ResponseEntity.ok(paymentCardService.getPaymentCardById(id));
     }
 
-    @GetMapping("/api/v1/cards")
+    @GetMapping("/cards")
     public ResponseEntity<Page<PaymentCardResponse>> getAllPaymentCards(
             @RequestParam(required = false) String username,
             @RequestParam(required = false) String surname,
@@ -50,14 +50,14 @@ public class PaymentCardController {
         return ResponseEntity.ok(paymentCardService.getAllPaymentCards(username, surname, pageable));
     }
 
-    @PutMapping("api/v1/cards/{id}")
+    @PutMapping("/cards/{id}")
     public ResponseEntity<PaymentCardResponse> updatePaymentCard(
             @PathVariable UUID id,
             @Valid @RequestBody UpdatePaymentCardRequest updatePaymentCardRequest) {
         return ResponseEntity.ok(paymentCardService.updatePaymentCard(id, updatePaymentCardRequest));
     }
 
-    @PatchMapping("/api/v1/cards/{id}/active")
+    @PatchMapping("/cards/{id}/active")
     public ResponseEntity<Void> setPaymentCardActive(
             @PathVariable UUID id,
             @Valid @RequestBody SetActiveRequest setActiveRequest) {
@@ -65,7 +65,7 @@ public class PaymentCardController {
         return ResponseEntity.noContent().build();
     }
 
-    @DeleteMapping("/api/v1/cards/{id}")
+    @DeleteMapping("/cards/{id}")
     public ResponseEntity<Void> deletePaymentCard(@PathVariable UUID id) {
         paymentCardService.deletePaymentCard(id);
         return ResponseEntity.noContent().build();

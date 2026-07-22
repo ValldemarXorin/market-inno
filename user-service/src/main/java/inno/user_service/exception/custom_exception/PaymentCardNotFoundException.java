@@ -1,4 +1,4 @@
-package inno.user_service.exception;
+package inno.user_service.exception.custom_exception;
 
 import java.util.UUID;
 
