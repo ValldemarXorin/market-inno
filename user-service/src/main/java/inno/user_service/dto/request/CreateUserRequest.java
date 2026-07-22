@@ -5,9 +5,21 @@ import jakarta.validation.constraints.*;
 import java.time.LocalDate;
 
 public record CreateUserRequest(
-        @NotBlank @Size(max = 100) String username,
-        @NotBlank @Size(max = 100) String surname,
-        @NotNull @Past LocalDate birthDate,
-        @NotBlank @Email @Size(max = 255) String email
+        @NotBlank(message = "Name must not be blank")
+        @Size(max = 100, message = "Name must not exceed 100 characters")
+        String name,
+
+        @NotBlank(message = "Surname must not be blank")
+        @Size(max = 100, message = "Surname must not exceed 100 characters")
+        String surname,
+
+        @NotNull(message = "Birth date must not be null")
+        @Past(message = "Birth date must be in the past")
+        LocalDate birthDate,
+
+        @NotBlank(message = "Email must not be blank")
+        @Email(message = "Email must be a valid email address")
+        @Size(max = 255, message = "Email must not exceed 255 characters")
+        String email
 ) {
 }
