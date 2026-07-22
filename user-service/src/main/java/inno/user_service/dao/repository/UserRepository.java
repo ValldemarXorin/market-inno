@@ -1,4 +1,4 @@
-package inno.user_service.repository;
+package inno.user_service.dao.repository;
 
 import inno.user_service.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -28,12 +28,23 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
     // Используется унаследованный findAll(Specification<User>, Pageable)
     // из JpaSpecificationExecutor, вместе с UserSpecifications.filterBy(name, surname)
 
-    // ===== 5. Update by id =====
-    // Используется унаследованный findById(UUID) для загрузки + save(User) для сохранения —
-    // dirty checking через изменённые сеттеры сам сгенерирует UPDATE,
-    // JPA Auditing (@LastModifiedDate) сработает автоматически
+    @Modifying
+    @Transactional
+    @Query("""
+            UPDATE User u
+            SET u.username = :name,
+                u.surname = :surname,
+                u.birthDate = :birthDate,
+                u.email = :email,
+                u.updatedAt = CURRENT_TIMESTAMP
+            WHERE u.id = :id
+            """)
+    int updateUserDetails(@Param("id") UUID id,
+                          @Param("name") String name,
+                          @Param("surname") String surname,
+                          @Param("birthDate") LocalDate birthDate,
+                          @Param("email") String email);
 
-    // ===== 6. Activate/Deactivate =====
     @Modifying
     @Transactional
     @Query(value = "UPDATE users SET active = :active, updated_at = now() WHERE id = :id", nativeQuery = true)
