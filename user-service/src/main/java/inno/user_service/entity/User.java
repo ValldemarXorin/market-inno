@@ -23,28 +23,18 @@ public class User extends BaseEntity{
     @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
     private UUID id;
 
-    @NotBlank
-    @Size(max = 100)
     @Column(nullable = false, length = 100)
     private String username;
 
-    @NotBlank
-    @Size(max = 100)
     @Column(nullable = false, length = 100)
     private String surname;
 
-    @NotNull
-    @Past
     @Column(name = "birth_date", nullable = false)
     private LocalDate birthDate;
 
-    @NotBlank
-    @Email
-    @Size(max = 255)
     @Column(nullable = false, unique = true, length = 255)
     private String email;
 
-    @NotNull
     @Column(nullable = false)
     private Boolean active = true;
 
