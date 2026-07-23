@@ -2,6 +2,8 @@ package inno.user_service.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
+import com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
@@ -25,12 +27,19 @@ public class RedisConfig {
 
     private static final long CACHE_EXPIRATION_MINUTES = 20;
 
-    private RedisSerializer<Object> jsonRedisSerializer() {
+    private static RedisSerializer<Object> jsonRedisSerializer() {
         ObjectMapper objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
-                .registerModule(new com.fasterxml.jackson.module.paramnames.ParameterNamesModule())
-                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-                .disable(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        PolymorphicTypeValidator typeValidator = BasicPolymorphicTypeValidator.builder()
+                .allowIfSubType("inno.user_service.dto")
+                .build();
+
+        objectMapper.activateDefaultTyping(
+                typeValidator,
+                ObjectMapper.DefaultTyping.NON_FINAL
+        );
 
         return new GenericJackson2JsonRedisSerializer(objectMapper);
     }
