@@ -36,9 +36,9 @@ public class UserControllerIntegrationTest {
 
     @Container
     static PostgreSQLContainer<?> myPostgres = new PostgreSQLContainer<>("postgres:17")
-            .withDatabaseName("testdb")
-            .withUsername("testuser")
-            .withPassword("testpass");
+            .withDatabaseName("userservice")
+            .withUsername("postgres")
+            .withPassword("postgres");
 
     @Container
     static RedisContainer myRedis = new RedisContainer(DockerImageName.parse("redis:7"));
