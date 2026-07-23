@@ -31,6 +31,12 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'org.springframework.boot:spring-boot-starter-cache'
 
+	// Модуль для поддержки Java 8+ временных типов (LocalDate, LocalDateTime)
+	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+
+	// Модуль для поддержки десериализации Record (без пустых конструкторов)
+	implementation 'com.fasterxml.jackson.module:jackson-module-parameter-names'
+
 	// Lombok
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
