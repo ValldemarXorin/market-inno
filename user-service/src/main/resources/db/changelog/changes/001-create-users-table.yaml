@@ -13,7 +13,7 @@ databaseChangeLog:
                     primaryKey: true
                     nullable: false
               - column:
-                  name: name
+                  name: username
                   type: VARCHAR(100)
                   constraints:
                     nullable: false

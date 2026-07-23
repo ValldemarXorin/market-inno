@@ -18,7 +18,7 @@ import java.util.UUID;
 public class PaymentCard extends BaseEntity {
 
     @Id
-    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @UuidGenerator(style = UuidGenerator.Style.TIME)
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)

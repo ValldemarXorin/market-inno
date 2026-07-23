@@ -20,7 +20,7 @@ import java.util.UUID;
 public class User extends BaseEntity{
 
     @Id
-    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @UuidGenerator(style = UuidGenerator.Style.TIME)
     private UUID id;
 
     @Column(nullable = false, length = 100)
