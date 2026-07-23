@@ -1,6 +1,5 @@
 package inno.user_service.mapper;
 
-import inno.user_service.dto.cache.UserWithCardsResponse;
 import inno.user_service.dto.request.CreateUserRequest;
 import inno.user_service.dto.response.UserResponse;
 import inno.user_service.entity.User;
@@ -18,7 +17,4 @@ public interface UserMapper {
     User toEntity(CreateUserRequest request);
 
     UserResponse toResponse(User user);
-
-    @Mapping(target = "cards", source = "paymentCards")
-    UserWithCardsResponse toResponseWithCards(User user);
 }
