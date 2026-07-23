@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - "user-service/**"
-    branches: [ "main", "master", "develop" ]
+    branches: [ "main", "develop" ]
   pull_request:
     paths:
       - "user-service/**"
