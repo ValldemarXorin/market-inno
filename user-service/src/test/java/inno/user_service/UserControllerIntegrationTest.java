@@ -18,6 +18,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -52,7 +53,7 @@ public class UserControllerIntegrationTest {
         registry.add("spring.data.redis.host", myRedis::getHost);
         registry.add("spring.data.redis.port", () -> myRedis.getMappedPort(6379));
 
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
     }
 
     @Test
@@ -76,11 +77,13 @@ public class UserControllerIntegrationTest {
         String idFromDb = createdUser.id().toString();
 
         mockMvc.perform(get("/users/" + idFromDb))
+                .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(idFromDb))
                 .andExpect(jsonPath("$.username").value("Masha"));
 
         mockMvc.perform(get("/users/" + idFromDb))
+                .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(idFromDb));
 
