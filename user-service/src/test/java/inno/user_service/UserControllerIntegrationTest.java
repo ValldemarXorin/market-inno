@@ -6,8 +6,8 @@ import inno.user_service.dto.request.CreateUserRequest;
 import inno.user_service.dto.response.UserResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -67,7 +67,7 @@ public class UserControllerIntegrationTest {
         String responseContent = mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
-                .andExpect(status().isCreated()) // Ждем статус 201 Created
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.username").value("Masha"))
                 .andExpect(jsonPath("$.email").value("masha@yandex.ru"))
                 .andReturn().getResponse().getContentAsString();
