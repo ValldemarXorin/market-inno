@@ -6,7 +6,7 @@ spring:
   application:
     name: user-service
   profiles:
-    active: local # По умолчанию запускаемся локально из IDE
+    active: local
 
   liquibase:
     enabled: true
