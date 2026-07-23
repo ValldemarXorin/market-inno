@@ -44,7 +44,7 @@ jobs:
         with:
           args: >
             -Dsonar.projectKey=market-inno-user-service
-            -Dsonar.organization=ValldemarXorin
+            -Dsonar.organization=valldemarxorin
             -Dsonar.sources=user-service/src/main/java
             -Dsonar.tests=user-service/src/test/java
 
