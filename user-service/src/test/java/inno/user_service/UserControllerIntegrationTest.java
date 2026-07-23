@@ -52,7 +52,7 @@ public class UserControllerIntegrationTest {
         registry.add("spring.data.redis.host", myRedis::getHost);
         registry.add("spring.data.redis.port", () -> myRedis.getMappedPort(6379));
 
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "update");
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
     }
 
     @Test
