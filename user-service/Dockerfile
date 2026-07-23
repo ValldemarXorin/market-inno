@@ -22,3 +22,5 @@ COPY --from=app-compiler /source/build/libs/*.jar application.jar
 EXPOSE 8080
 
 ENTRYPOINT ["java", "-Dspring.profiles.active=docker", "-jar", "application.jar"]
+
+#final testing ci
