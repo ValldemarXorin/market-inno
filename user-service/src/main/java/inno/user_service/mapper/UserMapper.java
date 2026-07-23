@@ -1,12 +1,13 @@
 package inno.user_service.mapper;
 
+import inno.user_service.dto.cache.UserWithCardsResponse;
 import inno.user_service.dto.request.CreateUserRequest;
 import inno.user_service.dto.response.UserResponse;
 import inno.user_service.entity.User;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = PaymentCardMapper.class)
 public interface UserMapper {
 
     @Mapping(target = "id", ignore = true)
@@ -17,4 +18,7 @@ public interface UserMapper {
     User toEntity(CreateUserRequest request);
 
     UserResponse toResponse(User user);
+
+    @Mapping(target = "cards", source = "paymentCards")
+    UserWithCardsResponse toResponseWithCards(User user);
 }
