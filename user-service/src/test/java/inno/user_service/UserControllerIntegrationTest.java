@@ -77,7 +77,6 @@ public class UserControllerIntegrationTest {
         String idFromDb = createdUser.id().toString();
 
         mockMvc.perform(get("/users/" + idFromDb))
-                .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(idFromDb))
                 .andExpect(jsonPath("$.username").value("Masha"));

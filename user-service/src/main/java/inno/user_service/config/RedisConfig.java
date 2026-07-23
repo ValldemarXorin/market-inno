@@ -28,7 +28,9 @@ public class RedisConfig {
     private RedisSerializer<Object> jsonRedisSerializer() {
         ObjectMapper objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
-                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+                .registerModule(new com.fasterxml.jackson.module.paramnames.ParameterNamesModule())
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+                .disable(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
         return new GenericJackson2JsonRedisSerializer(objectMapper);
     }
