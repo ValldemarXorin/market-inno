@@ -65,7 +65,7 @@ public class UserControllerIntegrationTest {
                 "masha@yandex.ru"
         );
 
-        String responseContent = mockMvc.perform(post("/api/v1/users")
+        String responseContent = mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isCreated())
@@ -76,17 +76,17 @@ public class UserControllerIntegrationTest {
         UserResponse createdUser = objectMapper.readValue(responseContent, UserResponse.class);
         String idFromDb = createdUser.id().toString();
 
-        mockMvc.perform(get("/api/v1/users/" + idFromDb))
+        mockMvc.perform(get("/users/" + idFromDb))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(idFromDb))
                 .andExpect(jsonPath("$.username").value("Masha"));
 
-        mockMvc.perform(get("/api/v1/users/" + idFromDb))
+        mockMvc.perform(get("/users/" + idFromDb))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(idFromDb));
 
-        mockMvc.perform(get("/api/v1/users/00000000-0000-0000-0000-000000000000"))
+        mockMvc.perform(get("/users/00000000-0000-0000-0000-000000000000"))
                 .andExpect(status().isNotFound());
     }
 }
