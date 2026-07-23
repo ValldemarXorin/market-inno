@@ -1,5 +1,6 @@
 package inno.user_service.service;
 
+import inno.user_service.config.RedisConfig;
 import inno.user_service.dao.repository.PaymentCardRepository;
 import inno.user_service.dao.repository.UserRepository;
 import inno.user_service.dao.specification.PaymentCardSpecification;
@@ -13,22 +14,29 @@ import inno.user_service.exception.custom_exception.PaymentCardNotFoundException
 import inno.user_service.exception.custom_exception.UserNotFoundException;
 import inno.user_service.mapper.PaymentCardMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class PaymentCardService {
+
     private static final int MAX_CARDS_PER_USER = 5;
 
     private final PaymentCardRepository paymentCardRepository;
     private final UserRepository userRepository;
     private final PaymentCardMapper paymentCardMapper;
+    private final CacheManager cacheManager;
 
+    @CacheEvict(cacheNames = RedisConfig.USER_CARDS_CACHE, key = "#userId")
     public PaymentCardResponse createPaymentCard(UUID userId, CreatePaymentCardRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
@@ -39,7 +47,8 @@ public class PaymentCardService {
 
         PaymentCard card = paymentCardMapper.toEntity(request);
         card.setUser(user);
-        return paymentCardMapper.toResponse(paymentCardRepository.save(card));
+        PaymentCard saved = paymentCardRepository.save(card);
+        return paymentCardMapper.toResponse(saved);
     }
 
     public PaymentCardResponse getPaymentCardById(UUID id) {
@@ -48,14 +57,21 @@ public class PaymentCardService {
         return paymentCardMapper.toResponse(card);
     }
 
-    public Page<PaymentCardResponse> getAllPaymentCards(String username, String surname, Pageable pageable) {
-        return paymentCardRepository.findAll(PaymentCardSpecification.filterByOwner(username, surname), pageable)
+    public Page<PaymentCardResponse> getAllPaymentCards(String name, String surname, Pageable pageable) {
+        return paymentCardRepository.findAll(PaymentCardSpecification.filterByOwner(name, surname), pageable)
                 .map(paymentCardMapper::toResponse);
     }
 
     public Page<PaymentCardResponse> getPaymentCardsByUserId(UUID userId, Pageable pageable) {
         return paymentCardRepository.findAllByUserId(userId, pageable)
                 .map(paymentCardMapper::toResponse);
+    }
+
+    @Cacheable(cacheNames = RedisConfig.USER_CARDS_CACHE, key = "#userId")
+    public List<PaymentCardResponse> getAllCardsByUserId(UUID userId) {
+        return paymentCardRepository.findAllByUserId(userId).stream()
+                .map(paymentCardMapper::toResponse)
+                .toList();
     }
 
     @Transactional
@@ -65,6 +81,7 @@ public class PaymentCardService {
         if (updated == 0) {
             throw new PaymentCardNotFoundException(id);
         }
+        evictOwnerCardsCache(id);
         return getPaymentCardById(id);
     }
 
@@ -74,13 +91,27 @@ public class PaymentCardService {
         if (updated == 0) {
             throw new PaymentCardNotFoundException(id);
         }
+        evictOwnerCardsCache(id);
     }
 
     @Transactional
     public void deletePaymentCard(UUID id) {
-        if (!paymentCardRepository.existsById(id)) {
-            throw new PaymentCardNotFoundException(id);
-        }
+        // userId нужно узнать ДО удаления — после DELETE строки уже не существует
+        UUID ownerId = paymentCardRepository.findUserIdById(id)
+                .orElseThrow(() -> new PaymentCardNotFoundException(id));
+
         paymentCardRepository.deleteById(id);
+        evictCardsCache(ownerId);
+    }
+
+    private void evictOwnerCardsCache(UUID cardId) {
+        paymentCardRepository.findUserIdById(cardId).ifPresent(this::evictCardsCache);
+    }
+
+    private void evictCardsCache(UUID userId) {
+        var cache = cacheManager.getCache(RedisConfig.USER_CARDS_CACHE);
+        if (cache != null) {
+            cache.evict(userId);
+        }
     }
 }
