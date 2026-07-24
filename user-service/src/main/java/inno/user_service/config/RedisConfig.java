@@ -1,9 +1,8 @@
 package inno.user_service.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
-import com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
@@ -28,17 +27,13 @@ public class RedisConfig {
     private static final long CACHE_EXPIRATION_MINUTES = 20;
 
     private static RedisSerializer<Object> jsonRedisSerializer() {
-        ObjectMapper objectMapper = new ObjectMapper()
-                .registerModule(new JavaTimeModule())
-                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-
-        PolymorphicTypeValidator typeValidator = BasicPolymorphicTypeValidator.builder()
-                .allowIfSubType("inno.user_service.dto")
+        var objectMapper = JsonMapper.builder()
+                .addModule(new JavaTimeModule())
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
                 .build();
-
         objectMapper.activateDefaultTyping(
-                typeValidator,
-                ObjectMapper.DefaultTyping.NON_FINAL
+                LaissezFaireSubTypeValidator.instance,
+                com.fasterxml.jackson.databind.ObjectMapper.DefaultTyping.EVERYTHING
         );
 
         return new GenericJackson2JsonRedisSerializer(objectMapper);
@@ -47,8 +42,7 @@ public class RedisConfig {
     @Bean
     public RedisTemplate<String, Object> redisTemplate(LettuceConnectionFactory lettuceFactory) {
         var txTemplate = new RedisTemplate<String, Object>();
-
-        RedisSerializer<Object> jsonSerializer = jsonRedisSerializer();
+        var jsonSerializer = jsonRedisSerializer();
 
         txTemplate.setConnectionFactory(lettuceFactory);
         txTemplate.setKeySerializer(RedisSerializer.string());
@@ -63,10 +57,11 @@ public class RedisConfig {
 
     @Bean
     public RedisCacheManager redisCacheManager(LettuceConnectionFactory lettuceFactory) {
+        var jsonSerializer = jsonRedisSerializer();
         RedisCacheConfiguration cacheSettings = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(CACHE_EXPIRATION_MINUTES))
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(RedisSerializer.string()))
-                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(jsonRedisSerializer()))
+                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(jsonSerializer))
                 .disableCachingNullValues();
 
         return RedisCacheManager.RedisCacheManagerBuilder

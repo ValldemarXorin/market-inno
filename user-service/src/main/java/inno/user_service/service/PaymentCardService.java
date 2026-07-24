@@ -96,7 +96,6 @@ public class PaymentCardService {
 
     @Transactional
     public void deletePaymentCard(UUID id) {
-        // userId нужно узнать ДО удаления — после DELETE строки уже не существует
         UUID ownerId = paymentCardRepository.findUserIdById(id)
                 .orElseThrow(() -> new PaymentCardNotFoundException(id));
 
