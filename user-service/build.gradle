@@ -72,7 +72,10 @@ jacocoTestReport {
 
 	classDirectories.setFrom(files(classDirectories.files.collect {
 		fileTree(dir: it, exclude: [
-				'**/*MapperImpl*.*'
+				'**/*MapperImpl*.*',
+				'inno/**/exception/**',
+				'inno/**/dao/**',
+				'inno/**/*Application.*'
 		])
 	}))
 }
