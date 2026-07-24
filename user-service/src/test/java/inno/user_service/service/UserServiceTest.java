@@ -20,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -46,7 +47,7 @@ public class UserServiceTest {
     private String testNameVova = "vova";
     private String testSurnameKhorin = "khorin";
     private String testEmailVova = "vova@gmail.com";
-    private LocalDate testDateVova = LocalDate.of(2006, 1, 20);
+    private LocalDate testDateVova = LocalDate.of(2006, Month.JANUARY, 20);
 
     @BeforeEach
     public void initData() {

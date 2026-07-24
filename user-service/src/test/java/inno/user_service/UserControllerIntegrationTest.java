@@ -23,6 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDate;
+import java.time.Month;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -61,7 +62,7 @@ public class UserControllerIntegrationTest {
         CreateUserRequest requestDto = new CreateUserRequest(
                 "Masha",
                 "Mashina",
-                LocalDate.of(1998, 10, 12),
+                LocalDate.of(1998, Month.OCTOBER, 12),
                 "masha@yandex.ru"
         );
 
