@@ -2,6 +2,7 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.4.2' //4.1.0
 	id 'io.spring.dependency-management' version '1.1.7'
+	id 'jacoco'
 }
 
 ext {
@@ -22,7 +23,6 @@ repositories {
 }
 
 dependencies {
-
 	implementation 'org.liquibase:liquibase-core'
 
 	// PostgreSQL driver
@@ -31,7 +31,6 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'org.springframework.boot:spring-boot-starter-cache'
 
-	// Модуль для поддержки Java 8+ временных типов (LocalDate, LocalDateTime)
 	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 
 	// Модуль для поддержки десериализации Record (без пустых конструкторов)
@@ -60,4 +59,24 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	finalizedBy jacocoTestReport
+}
+
+jacocoTestReport {
+	dependsOn test
+
+	reports {
+		xml.required = true
+		html.required = true
+	}
+
+	classDirectories.setFrom(files(classDirectories.files.collect {
+		fileTree(dir: it, exclude: [
+				'**/*MapperImpl*.*'
+		])
+	}))
+}
+
+tasks.withType(JavaCompile).configureEach {
+	options.compilerArgs.add("-Amapstruct.defaultComponentModel=spring") // Опционально для удобства MapStruct
 }
