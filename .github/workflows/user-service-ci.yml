@@ -1,52 +1,58 @@
-name: User Service CI Pipeline
+name: CI User Service
 
 on:
   push:
-    paths:
-      - "user-service/**"
-    branches: [ "main", "develop" ]
+    branches:
+      - develop
+      - main
+      - feature/**
   pull_request:
-    paths:
-      - "user-service/**"
-    branches: [ "main", "master" ]
+    branches:
+      - develop
+      - main
 
 jobs:
-  pipeline-execution:
+  build-test-sonar-docker:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+
     steps:
-      - name: Checkout repository code
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up Java 23 Environment
+      - name: Setup JDK 23
         uses: actions/setup-java@v4
         with:
-          java-version: '23'
-          distribution: 'temurin'
-          cache: 'gradle'
+          distribution: temurin
+          java-version: 23
+          cache: gradle
 
-      - name: Grant executable rights for Gradle
-        run: chmod +x user-service/gradlew
+      - name: Make gradlew executable
+        run: chmod +x gradlew
 
-      - name: Step 1 - Build Application
-        run: ./user-service/gradlew -p user-service compileJava --no-daemon
+      - name: Build project
+        run: ./gradlew clean build --no-daemon
 
-      - name: Step 2 - Run Unit and Integration Tests
-        run: ./user-service/gradlew -p user-service test --no-daemon
-
-      - name: Step 3 - SonarQube Code Analysis
-        uses: sonarsource/sonarqube-scan-action@v4
+      - name: SonarCloud Scan
+        uses: sonarsource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_HOST_URL: https://sonarcloud.io
         with:
           args: >
-            -Dsonar.projectKey=market-inno-user-service
+            -Dsonar.projectKey=ValldemarXorin_market-inno
             -Dsonar.organization=valldemarxorin
-            -Dsonar.sources=user-service/src/main/java
-            -Dsonar.tests=user-service/src/test/java
+            -Dsonar.java.binaries=user-service/build/classes
+            -Dsonar.java.libraries=user-service/build/libs/*.jar
+            -Dsonar.java.test.binaries=user-service/build/classes/java/test
+            -Dsonar.junit.reportPaths=user-service/build/test-results/test
 
-      - name: Step 4 - Build Final Docker Image Artefact
-        run: docker build -t user-service-app:latest ./user-service
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t market-inno-user-service:${{ github.sha }} \
+            ./user-service
