@@ -48,7 +48,7 @@ jobs:
             -Dsonar.sources=user-service/src/main/java
             -Dsonar.tests=user-service/src/test/java
             -Dsonar.coverage.jacoco.xmlReportPaths=user-service/build/reports/jacoco/test/jacocoTestReport.xml
-            -Dsonar.coverage.exclusions=**/exception/**,**/dao/**,**/*Application.java,**/*MapperImpl.java
+            -Dsonar.coverage.exclusions=**/exception/**,**/dao/**,**/*Application.java,**/*MapperImpl.java,**/util/**,**/aspect/**
 
       - name: Step 4 - Build Final Docker Image Artefact
         run: docker build -t user-service-app:latest ./user-service
