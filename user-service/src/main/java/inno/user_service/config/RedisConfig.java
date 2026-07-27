@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,12 +20,11 @@ import java.time.Duration;
 
 @Configuration
 @EnableCaching
+@EnableConfigurationProperties(CacheProperties.class)
 public class RedisConfig {
 
     public static final String USERS_CACHE = "users";
     public static final String USER_CARDS_CACHE = "userCards";
-
-    private static final long CACHE_EXPIRATION_MINUTES = 20;
 
     private static RedisSerializer<Object> jsonRedisSerializer() {
         var objectMapper = JsonMapper.builder()
@@ -56,10 +56,10 @@ public class RedisConfig {
     }
 
     @Bean
-    public RedisCacheManager redisCacheManager(LettuceConnectionFactory lettuceFactory) {
+    public RedisCacheManager redisCacheManager(LettuceConnectionFactory lettuceFactory, CacheProperties cacheProperties) {
         var jsonSerializer = jsonRedisSerializer();
         RedisCacheConfiguration cacheSettings = RedisCacheConfiguration.defaultCacheConfig()
-                .entryTtl(Duration.ofMinutes(CACHE_EXPIRATION_MINUTES))
+                .entryTtl(Duration.ofMinutes(cacheProperties.expirationMinutes()))
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(RedisSerializer.string()))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(jsonSerializer))
                 .disableCachingNullValues();
