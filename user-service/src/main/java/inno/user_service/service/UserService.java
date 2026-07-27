@@ -1,5 +1,6 @@
 package inno.user_service.service;
 
+import inno.user_service.config.CacheNames;
 import inno.user_service.config.RedisConfig;
 import inno.user_service.dao.repository.UserRepository;
 import inno.user_service.dao.specification.UserSpecification;
@@ -28,7 +29,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
 
-    @CachePut(cacheNames = RedisConfig.USERS_CACHE, key = "#result.id")
+    @CachePut(cacheNames = CacheNames.USERS_CACHE, key = "#result.id")
     public UserResponse createUser(CreateUserRequest createUserRequest) {
         if (userRepository.existsByEmail(createUserRequest.email())) {
             throw new EmailAlreadyExistsException(createUserRequest.email());
@@ -38,7 +39,7 @@ public class UserService {
         return userMapper.toResponse(userRepository.save(user));
     }
 
-    @Cacheable(cacheNames = RedisConfig.USERS_CACHE, key = "#id")
+    @Cacheable(cacheNames = CacheNames.USERS_CACHE, key = "#id")
     public UserResponse getUserById(UUID id) {
         User user = userRepository.findById(id).orElseThrow(() -> new UserNotFoundException(id));
         return userMapper.toResponse(user);
@@ -51,7 +52,7 @@ public class UserService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = RedisConfig.USERS_CACHE, key = "#id")
+    @CacheEvict(cacheNames = CacheNames.USERS_CACHE, key = "#id")
     public UserResponse updateUser(UUID id, UpdateUserRequest updateUserRequest) {
         int updated = userRepository.updateUserDetails(
                 id,
@@ -69,7 +70,7 @@ public class UserService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = RedisConfig.USERS_CACHE, key = "#id")
+    @CacheEvict(cacheNames = CacheNames.USERS_CACHE, key = "#id")
     public void setUserActive(UUID id, boolean isActive) {
         int updated = userRepository.setActiveNative(id, isActive);
 
@@ -80,8 +81,8 @@ public class UserService {
 
     @Transactional
     @Caching(evict = {
-            @CacheEvict(cacheNames = RedisConfig.USERS_CACHE, key = "#id"),
-            @CacheEvict(cacheNames = RedisConfig.USER_CARDS_CACHE, key = "#id")
+            @CacheEvict(cacheNames = CacheNames.USERS_CACHE, key = "#id"),
+            @CacheEvict(cacheNames = CacheNames.USER_CARDS_CACHE, key = "#id")
     })
     public void deleteUser(UUID id) {
         if (!userRepository.existsById(id)) {

@@ -1,5 +1,6 @@
 package inno.user_service.service;
 
+import inno.user_service.config.CacheNames;
 import inno.user_service.config.RedisConfig;
 import inno.user_service.dao.repository.PaymentCardRepository;
 import inno.user_service.dao.repository.UserRepository;
@@ -36,7 +37,7 @@ public class PaymentCardService {
     private final PaymentCardMapper paymentCardMapper;
     private final CacheManager cacheManager;
 
-    @CacheEvict(cacheNames = RedisConfig.USER_CARDS_CACHE, key = "#userId")
+    @CacheEvict(cacheNames = CacheNames.USER_CARDS_CACHE, key = "#userId")
     public PaymentCardResponse createPaymentCard(UUID userId, CreatePaymentCardRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
@@ -67,7 +68,7 @@ public class PaymentCardService {
                 .map(paymentCardMapper::toResponse);
     }
 
-    @Cacheable(cacheNames = RedisConfig.USER_CARDS_CACHE, key = "#userId")
+    @Cacheable(cacheNames = CacheNames.USER_CARDS_CACHE, key = "#userId")
     public List<PaymentCardResponse> getAllCardsByUserId(UUID userId) {
         return paymentCardRepository.findAllByUserId(userId).stream()
                 .map(paymentCardMapper::toResponse)
@@ -108,7 +109,7 @@ public class PaymentCardService {
     }
 
     private void evictCardsCache(UUID userId) {
-        var cache = cacheManager.getCache(RedisConfig.USER_CARDS_CACHE);
+        var cache = cacheManager.getCache(CacheNames.USER_CARDS_CACHE);
         if (cache != null) {
             cache.evict(userId);
         }

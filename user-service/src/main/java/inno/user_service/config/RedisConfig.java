@@ -23,9 +23,6 @@ import java.time.Duration;
 @EnableConfigurationProperties(CacheProperties.class)
 public class RedisConfig {
 
-    public static final String USERS_CACHE = "users";
-    public static final String USER_CARDS_CACHE = "userCards";
-
     private static RedisSerializer<Object> jsonRedisSerializer() {
         var objectMapper = JsonMapper.builder()
                 .addModule(new JavaTimeModule())
