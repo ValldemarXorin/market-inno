@@ -47,9 +47,14 @@ public interface PaymentCardRepository extends JpaRepository<PaymentCard, UUID>,
     @Query("UPDATE PaymentCard c SET c.active = :active, c.updatedAt = CURRENT_TIMESTAMP WHERE c.id = :id")
     int setActive(@Param("id") UUID id, @Param("active") boolean active);
 
-    Optional<UUID> findUserIdById(UUID id);
-
     boolean existsByNumber(String number);
 
     boolean existsByNumberAndIdNot(String number, UUID id);
+
+    @Query("""
+    select p.user.id
+    from PaymentCard p
+    where p.id = :id
+    """)
+    Optional<UUID> findUserIdById(@Param("id") UUID id);
 }

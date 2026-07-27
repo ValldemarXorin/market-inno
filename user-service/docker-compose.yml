@@ -1,19 +1,19 @@
 services:
-  user-service-app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "8080:8080"
-    depends_on:
-      postgres-db:
-        condition: service_healthy
-      redis-cache:
-        condition: service_healthy
-    env_file:
-      - .env
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
+#  user-service-app:
+#    build:
+#      context: .
+#      dockerfile: Dockerfile
+#    ports:
+#      - "8080:8080"
+#    depends_on:
+#      postgres-db:
+#        condition: service_healthy
+#      redis-cache:
+#        condition: service_healthy
+#    env_file:
+#      - .env
+#    environment:
+#      - SPRING_PROFILES_ACTIVE=docker
 
   postgres-db:
     image: postgres:17
