@@ -6,27 +6,19 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 
+@Repository
 public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificationExecutor<User> {
 
     boolean existsByEmail(String email);
 
-    // ===== 1. Create =====
-    // Используется унаследованный save(User) из JpaRepository
-
-    // ===== 2. Get by id =====
-    // Используется унаследованный findById(UUID) из JpaRepository
-
     Optional<User> findByIdAndActiveTrue(UUID id);
-
-    // ===== 3. Get all с пагинацией и фильтром по name/surname (Specifications) =====
-    // Используется унаследованный findAll(Specification<User>, Pageable)
-    // из JpaSpecificationExecutor, вместе с UserSpecifications.filterBy(name, surname)
 
     @Modifying
     @Transactional
