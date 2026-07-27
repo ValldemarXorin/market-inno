@@ -1,10 +1,7 @@
 package inno.user_service.exception;
 
 import inno.user_service.dto.response.ErrorResponse;
-import inno.user_service.exception.custom_exception.CardLimitExceededException;
-import inno.user_service.exception.custom_exception.EmailAlreadyExistsException;
-import inno.user_service.exception.custom_exception.PaymentCardNotFoundException;
-import inno.user_service.exception.custom_exception.UserNotFoundException;
+import inno.user_service.exception.custom_exception.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -40,6 +37,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(EmailAlreadyExistsException.class)
     public ResponseEntity<ErrorResponse> handleEmailAlreadyExists(
             EmailAlreadyExistsException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(CardNumberAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleCardNumberAlreadyExists(
+            CardNumberAlreadyExistsException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
 

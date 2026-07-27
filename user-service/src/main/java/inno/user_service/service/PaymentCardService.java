@@ -1,7 +1,6 @@
 package inno.user_service.service;
 
 import inno.user_service.config.CacheNames;
-import inno.user_service.config.RedisConfig;
 import inno.user_service.dao.repository.PaymentCardRepository;
 import inno.user_service.dao.repository.UserRepository;
 import inno.user_service.dao.specification.PaymentCardSpecification;
@@ -11,6 +10,7 @@ import inno.user_service.dto.response.PaymentCardResponse;
 import inno.user_service.entity.PaymentCard;
 import inno.user_service.entity.User;
 import inno.user_service.exception.custom_exception.CardLimitExceededException;
+import inno.user_service.exception.custom_exception.CardNumberAlreadyExistsException;
 import inno.user_service.exception.custom_exception.PaymentCardNotFoundException;
 import inno.user_service.exception.custom_exception.UserNotFoundException;
 import inno.user_service.mapper.PaymentCardMapper;
@@ -46,6 +46,10 @@ public class PaymentCardService {
             throw new CardLimitExceededException(userId);
         }
 
+        if (paymentCardRepository.existsByNumber(request.number())) {
+            throw new CardNumberAlreadyExistsException(request.number());
+        }
+
         PaymentCard card = paymentCardMapper.toEntity(request);
         card.setUser(user);
         PaymentCard saved = paymentCardRepository.save(card);
@@ -77,6 +81,10 @@ public class PaymentCardService {
 
     @Transactional
     public PaymentCardResponse updatePaymentCard(UUID id, UpdatePaymentCardRequest request) {
+        if (paymentCardRepository.existsByNumberAndIdNot(request.number(), id)) {
+            throw new CardNumberAlreadyExistsException(request.number());
+        }
+
         int updated = paymentCardRepository.updateCardDetails(
                 id, request.number(), request.holder(), request.expirationDate());
         if (updated == 0) {

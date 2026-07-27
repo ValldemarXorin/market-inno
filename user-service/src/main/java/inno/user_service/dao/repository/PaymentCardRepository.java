@@ -48,4 +48,8 @@ public interface PaymentCardRepository extends JpaRepository<PaymentCard, UUID>,
     int setActive(@Param("id") UUID id, @Param("active") boolean active);
 
     Optional<UUID> findUserIdById(UUID id);
+
+    boolean existsByNumber(String number);
+
+    boolean existsByNumberAndIdNot(String number, UUID id);
 }

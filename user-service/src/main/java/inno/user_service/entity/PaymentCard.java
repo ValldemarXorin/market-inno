@@ -25,7 +25,7 @@ public class PaymentCard extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false, length = 19)
+    @Column(nullable = false, length = 19, unique = true)
     private String number;
 
     @Column(nullable = false, length = 100)
