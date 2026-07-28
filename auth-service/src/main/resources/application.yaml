@@ -4,3 +4,9 @@ spring:
 
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+    access-token-ttl-minutes: ${JWT_ACCESS_TOKEN_TTL_MINUTES}
+    refresh-token-ttl-days: ${JWT_REFRESH_TOKEN_TTL_DAYS}
