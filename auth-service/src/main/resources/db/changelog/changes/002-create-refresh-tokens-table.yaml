@@ -1,0 +1,69 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-create-refresh-tokens-table
+      author: auth-service
+      changes:
+        - createTable:
+            tableName: refresh_tokens
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_credentials_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_refresh_tokens_user_credentials
+                    references: user_credentials(id)
+                    deleteCascade: true
+              - column:
+                  name: token_hash
+                  type: VARCHAR(512)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uk_refresh_tokens_token_hash
+              - column:
+                  name: family_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: revoked
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+
+        - createIndex:
+            indexName: idx_refresh_tokens_user_credentials_id
+            tableName: refresh_tokens
+            columns:
+              - column:
+                  name: user_credentials_id
+
+        - createIndex:
+            indexName: idx_refresh_tokens_family_id
+            tableName: refresh_tokens
+            columns:
+              - column:
+                  name: family_id
