@@ -1,0 +1,9 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-add-unique-constraint-on-card-number
+      author: ValldemarXorin
+      changes:
+        - addUniqueConstraint:
+            tableName: payment_cards
+            columnNames: number
+            constraintName: uc_payment_cards_number
