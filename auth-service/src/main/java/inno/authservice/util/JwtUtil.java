@@ -1,9 +1,9 @@
 package inno.authservice.util;
 
-import inno.authservice.config.JwtProperties;
+import inno.authservice.config.AuthProperties;
 import inno.authservice.entity.Role;
-import inno.authservice.exception.InvalidTokenException;
-import inno.authservice.exception.TokenExpiredException;
+import inno.authservice.exception.custom_exception.InvalidTokenException;
+import inno.authservice.exception.custom_exception.TokenExpiredException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -19,20 +19,20 @@ import java.util.Date;
 import java.util.UUID;
 
 @Component
-@EnableConfigurationProperties(JwtProperties.class)
+@EnableConfigurationProperties(AuthProperties.class)
 public class JwtUtil {
 
     private final SecretKey signingKey;
-    private final JwtProperties properties;
+    private final AuthProperties properties;
 
-    public JwtUtil(JwtProperties properties) {
+    public JwtUtil(AuthProperties properties) {
         this.properties = properties;
-        this.signingKey = Keys.hmacShaKeyFor(properties.secret().getBytes());
+        this.signingKey = Keys.hmacShaKeyFor(properties.jwt().secret().getBytes());
     }
 
     public String generateAccessToken(UUID userId, Role role) {
         Instant now = Instant.now();
-        Instant expiry = now.plus(properties.accessTokenTtlMinutes(), ChronoUnit.MINUTES);
+        Instant expiry = now.plus(properties.jwt().accessTokenTtlMinutes(), ChronoUnit.MINUTES);
 
         return Jwts.builder()
                 .subject(userId.toString())
