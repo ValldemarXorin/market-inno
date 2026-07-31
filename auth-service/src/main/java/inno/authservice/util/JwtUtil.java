@@ -19,7 +19,6 @@ import java.util.Date;
 import java.util.UUID;
 
 @Component
-@EnableConfigurationProperties(AuthProperties.class)
 public class JwtUtil {
 
     private final SecretKey signingKey;
