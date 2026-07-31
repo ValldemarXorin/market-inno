@@ -1,0 +1,30 @@
+server:
+  port: ${SERVER_PORT:8081}
+  servlet:
+    context-path: ${API_VERSION:/api/v1}
+
+spring:
+  application:
+    name: auth-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:auth_service}
+    username: ${DB_USER:auth_service}
+    password: ${DB_PASSWORD:auth_service}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+auth:
+  jwt:
+    secret: ${JWT_SECRET}
+    access-token-ttl-minutes: ${JWT_ACCESS_TOKEN_TTL_MINUTES:15}
+  refresh-token:
+    ttl-days: ${JWT_REFRESH_TOKEN_TTL_DAYS:30}
+    byte-length: ${REFRESH_TOKEN_BYTE_LENGTH:64}
+  bcrypt:
+    strength: ${BCRYPT_STRENGTH:10}
+
