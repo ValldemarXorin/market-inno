@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @RestControllerAdvice
@@ -63,7 +64,7 @@ public class GlobalExceptionHandler {
                 .toList();
 
         ValidationErrorResponse body = new ValidationErrorResponse(
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneId.of("UTC")),
                 HttpStatus.BAD_REQUEST.value(),
                 HttpStatus.BAD_REQUEST.getReasonPhrase(),
                 fieldErrors,
@@ -80,7 +81,7 @@ public class GlobalExceptionHandler {
 
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String message, HttpServletRequest request) {
         ErrorResponse body = new ErrorResponse(
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneId.of("UTC")),
                 status.value(),
                 status.getReasonPhrase(),
                 message,

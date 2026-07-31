@@ -20,6 +20,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Base64;
 import java.util.UUID;
 
@@ -64,7 +65,7 @@ public class AuthService {
             throw new RefreshTokenReusedException("Refresh token reuse detected, session revoked");
         }
 
-        if (existing.getExpiresAt().isBefore(LocalDateTime.now())) {
+        if (existing.getExpiresAt().isBefore(LocalDateTime.now(ZoneId.of("UTC")))) {
             throw new TokenExpiredException("Refresh token expired");
         }
 
@@ -95,7 +96,7 @@ public class AuthService {
         refreshToken.setUserCredentials(user);
         refreshToken.setTokenHash(hash(rawRefreshToken));
         refreshToken.setFamilyId(familyId);
-        refreshToken.setExpiresAt(LocalDateTime.now().plusDays(authProperties.refreshToken().ttlDays()));
+        refreshToken.setExpiresAt(LocalDateTime.now(ZoneId.of("UTC")).plusDays(authProperties.refreshToken().ttlDays()));
         refreshToken.setRevoked(false);
         refreshTokenRepository.save(refreshToken);
 

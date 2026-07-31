@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Component
 @RequiredArgsConstructor
@@ -25,7 +26,7 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
             throws IOException {
 
         ErrorResponse body = new ErrorResponse(
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneId.of("UTC")),
                 HttpStatus.FORBIDDEN.value(),
                 HttpStatus.FORBIDDEN.getReasonPhrase(),
                 "You do not have permission to access this resource",
