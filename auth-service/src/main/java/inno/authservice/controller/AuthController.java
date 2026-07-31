@@ -10,6 +10,7 @@ import inno.authservice.entity.UserCredentials;
 import inno.authservice.exception.custom_exception.InvalidTokenException;
 import inno.authservice.service.AuthService;
 import inno.authservice.service.UserCredentialsService;
+import inno.authservice.util.TokenExtractor;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -44,13 +45,6 @@ public class AuthController {
 
     @PostMapping("/validate")
     public TokenValidationResponse validate(@RequestHeader("Authorization") String authorizationHeader) {
-        return authService.validate(extractBearerToken(authorizationHeader));
-    }
-
-    private String extractBearerToken(String header) {
-        if (header == null || !header.startsWith(BEARER_PREFIX)) {
-            throw new InvalidTokenException("Authorization header must start with 'Bearer '");
-        }
-        return header.substring(BEARER_PREFIX.length());
+        return authService.validate(TokenExtractor.extractBearerToken(authorizationHeader));
     }
 }

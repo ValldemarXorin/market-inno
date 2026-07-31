@@ -47,7 +47,22 @@ public class UserCredentialsService {
     }
 
     @Transactional
-    public void setActive(UUID id, boolean active) {
+    public void activate(UUID id) {
+        setActive(id, true);
+    }
+
+    @Transactional
+    public void deactivate(UUID id) {
+        setActive(id, false);
+    }
+
+    public UserCredentialsResponse getById(UUID id) {
+        UserCredentials user = userCredentialsRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
+        return userCredentialsMapper.toResponse(user);
+    }
+
+    private void setActive(UUID id, boolean active) {
         UserCredentials user = userCredentialsRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
         user.setActive(active);
