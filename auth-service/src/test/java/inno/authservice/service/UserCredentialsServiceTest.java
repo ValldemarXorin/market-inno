@@ -83,7 +83,7 @@ class UserCredentialsServiceTest {
 
         when(userCredentialsRepository.findById(id)).thenReturn(Optional.of(user));
 
-        userCredentialsService.setActive(id, false);
+        userCredentialsService.deactivate(id);
 
         assertThat(user.getActive()).isFalse();
         verify(userCredentialsRepository).save(user);
@@ -94,10 +94,25 @@ class UserCredentialsServiceTest {
         UUID id = UUID.randomUUID();
         when(userCredentialsRepository.findById(id)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> userCredentialsService.setActive(id, false))
+        assertThatThrownBy(() -> userCredentialsService.deactivate(id))
                 .isInstanceOf(UserNotFoundException.class);
 
         verify(userCredentialsRepository, never()).save(any());
+    }
+
+    @Test
+    void activate_shouldSetActiveTrue_whenUserExists() {
+        UUID id = UUID.randomUUID();
+        UserCredentials user = new UserCredentials();
+        user.setId(id);
+        user.setActive(false);
+
+        when(userCredentialsRepository.findById(id)).thenReturn(Optional.of(user));
+
+        userCredentialsService.activate(id);
+
+        assertThat(user.getActive()).isTrue();
+        verify(userCredentialsRepository).save(user);
     }
 
     @Test
