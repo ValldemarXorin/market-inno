@@ -56,6 +56,13 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+
+    testLogging {
+        events "passed", "skipped", "failed"
+        showStandardStreams = true // Это заставит показать .andDo(print())
+        exceptionFormat = "full"   // Покажет полную ошибку Assert
+    }
+
     finalizedBy jacocoTestReport
 }
 
