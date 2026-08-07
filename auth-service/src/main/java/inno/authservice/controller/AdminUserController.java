@@ -22,16 +22,4 @@ public class AdminUserController {
     public List<UserCredentialsResponse> getAll() {
         return userCredentialsService.getAll();
     }
-
-    @PatchMapping("/{id}/activate")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void activate(@PathVariable UUID id) {
-        userCredentialsService.activate(id);
-    }
-
-    @PatchMapping("/{id}/deactivate")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deactivate(@PathVariable UUID id) {
-        userCredentialsService.deactivate(id);
-    }
 }
