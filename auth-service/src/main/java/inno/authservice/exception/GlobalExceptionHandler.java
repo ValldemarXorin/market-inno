@@ -23,6 +23,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleInvalidCredentials(InvalidCredentialsException ex, HttpServletRequest request) {
+        log.warn("Authentication failed: {}", ex.getMessage());
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request);
     }
 
@@ -44,6 +45,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UserDeactivatedException.class)
     public ResponseEntity<ErrorResponse> handleUserDeactivated(UserDeactivatedException ex, HttpServletRequest request) {
+        log.warn("Blocked request for deactivated user: {}", ex.getMessage());
         return build(HttpStatus.FORBIDDEN, ex.getMessage(), request);
     }
 

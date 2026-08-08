@@ -12,6 +12,7 @@ import inno.authservice.util.JwtUtil;
 import io.jsonwebtoken.Claims;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +25,7 @@ import java.time.ZoneId;
 import java.util.Base64;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -50,6 +52,7 @@ public class AuthService {
             throw new UserDeactivatedException("User account is deactivated");
         }
 
+        log.info("User {} successfully authenticated", credentialsUser.getId());
         return issueTokenPair(credentialsUser, UUID.randomUUID());
     }
 
@@ -66,6 +69,8 @@ public class AuthService {
         }
 
         if (existing.getExpiresAt().isBefore(LocalDateTime.now(ZoneId.of("UTC")))) {
+            log.debug("Refresh token expired for user {}, rejecting refresh",
+                    existing.getUserCredentials().getId());
             throw new TokenExpiredException("Refresh token expired");
         }
 
@@ -77,6 +82,7 @@ public class AuthService {
         existing.setRevoked(true);
         refreshTokenRepository.save(existing);
 
+        log.info("User {} successfully refreshed token pair", user.getId());
         return issueTokenPair(user, existing.getFamilyId());
     }
 

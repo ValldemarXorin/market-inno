@@ -16,12 +16,14 @@ import inno.authservice.repository.RefreshTokenRepository;
 import inno.authservice.repository.UserCredentialsRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserCredentialsService {
@@ -36,6 +38,7 @@ public class UserCredentialsService {
     @Transactional
     public RegisterResponse register(String login, String rawPassword) {
         if (userCredentialsRepository.existsByLogin(login)) {
+            log.warn("Registration rejected, login already taken");
             throw new LoginAlreadyExistsException("Login already taken: " + login);
         }
 
@@ -52,6 +55,10 @@ public class UserCredentialsService {
         outboxEvent.setAggregateId(saved.getId());
         outboxEvent.setPayload(toPayload(new UserCreatedEvent(saved.getId())));
         outboxEventRepository.save(outboxEvent);
+
+        log.info("Registered new user credentials: id={}", saved.getId());
+        log.info("Outbox event created: id={}, type={}, aggregateId={}",
+                outboxEvent.getId(), outboxEvent.getEventType(), outboxEvent.getAggregateId());
 
         return userCredentialsMapper.toRegisterResponse(saved);
     }
@@ -73,12 +80,14 @@ public class UserCredentialsService {
     @Transactional
     public void activate(UUID id) {
         setActive(id, true);
+        log.info("User {} activated", id);
     }
 
     @Transactional
     public void deactivate(UUID id) {
         setActive(id, false);
         refreshTokenRepository.revokeAllByUserCredentialsId(id);
+        log.info("User {} deactivated, refresh tokens revoked", id);
     }
 
     public UserCredentialsResponse getById(UUID id) {
