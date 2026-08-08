@@ -38,4 +38,6 @@ app:
     topic:
       user-status: user-status-events
       user-created: user-created-events
+  outbox:
+    publish-interval-ms: ${OUTBOX_PUBLISH_INTERVAL_MS:1000}
 

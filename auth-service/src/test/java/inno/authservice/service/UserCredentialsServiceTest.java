@@ -1,13 +1,15 @@
 package inno.authservice.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import inno.authservice.dto.response.RegisterResponse;
 import inno.authservice.dto.response.UserCredentialsResponse;
+import inno.authservice.entity.OutboxEvent;
 import inno.authservice.entity.Role;
 import inno.authservice.entity.UserCredentials;
 import inno.authservice.exception.custom_exception.LoginAlreadyExistsException;
 import inno.authservice.exception.custom_exception.UserNotFoundException;
 import inno.authservice.mapper.UserCredentialsMapper;
-import inno.authservice.messaging.UserCreatedEvent;
+import inno.authservice.repository.OutboxEventRepository;
 import inno.authservice.repository.RefreshTokenRepository;
 import inno.authservice.repository.UserCredentialsRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,7 +18,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
@@ -34,19 +35,24 @@ class UserCredentialsServiceTest {
     @Mock
     private UserCredentialsRepository userCredentialsRepository;
     @Mock
+    private OutboxEventRepository outboxEventRepository;
+    @Mock
     private PasswordEncoder passwordEncoder;
     @Mock
     private UserCredentialsMapper userCredentialsMapper;
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
-    @Mock
-    private ApplicationEventPublisher eventPublisher;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private UserCredentialsService userCredentialsService;
 
     @BeforeEach
     void setUp() {
-        userCredentialsService = new UserCredentialsService(userCredentialsRepository, passwordEncoder, userCredentialsMapper, refreshTokenRepository, eventPublisher);
+        userCredentialsService = new UserCredentialsService(
+                userCredentialsRepository, outboxEventRepository,
+                passwordEncoder, userCredentialsMapper,
+                refreshTokenRepository, objectMapper);
     }
 
     @Test
@@ -79,7 +85,7 @@ class UserCredentialsServiceTest {
     }
 
     @Test
-    void register_shouldPublishUserCreatedEventWithGeneratedUuid() {
+    void register_shouldCreateOutboxEventWithSameUuidInSameTransaction() {
         UUID generatedId = UUID.randomUUID();
         when(userCredentialsRepository.existsByLogin("john")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("hashed-password");
@@ -92,15 +98,18 @@ class UserCredentialsServiceTest {
 
         userCredentialsService.register("john", "password123");
 
-        ArgumentCaptor<UserCreatedEvent> eventCaptor = ArgumentCaptor.forClass(UserCreatedEvent.class);
-        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        ArgumentCaptor<OutboxEvent> outboxCaptor = ArgumentCaptor.forClass(OutboxEvent.class);
+        verify(outboxEventRepository).save(outboxCaptor.capture());
 
-        UserCreatedEvent event = eventCaptor.getValue();
-        assertThat(event.userId()).isEqualTo(generatedId);
+        OutboxEvent outboxEvent = outboxCaptor.getValue();
+        assertThat(outboxEvent.getEventType()).isEqualTo(OutboxEvent.TYPE_USER_CREATED);
+        assertThat(outboxEvent.getAggregateId()).isEqualTo(generatedId);
+        assertThat(outboxEvent.getPublished()).isFalse();
+        assertThat(outboxEvent.getPayload()).contains(generatedId.toString());
     }
 
     @Test
-    void register_shouldNotPublishEvent_whenCredentialsTransactionFails() {
+    void register_shouldNotWriteOutboxEvent_whenCredentialsTransactionFails() {
         when(userCredentialsRepository.existsByLogin("john")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("hashed-password");
         when(userCredentialsRepository.save(any(UserCredentials.class)))
@@ -109,7 +118,7 @@ class UserCredentialsServiceTest {
         assertThatThrownBy(() -> userCredentialsService.register("john", "password123"))
                 .isInstanceOf(RuntimeException.class);
 
-        verify(eventPublisher, never()).publishEvent(any());
+        verify(outboxEventRepository, never()).save(any());
     }
 
     @Test
@@ -120,7 +129,7 @@ class UserCredentialsServiceTest {
                 .isInstanceOf(LoginAlreadyExistsException.class);
 
         verify(userCredentialsRepository, never()).save(any());
-        verifyNoInteractions(passwordEncoder, eventPublisher);
+        verifyNoInteractions(passwordEncoder, outboxEventRepository);
     }
 
     @Test

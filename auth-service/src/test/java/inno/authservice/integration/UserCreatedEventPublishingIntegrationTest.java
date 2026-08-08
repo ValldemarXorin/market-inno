@@ -1,7 +1,9 @@
 package inno.authservice.integration;
 
 import inno.authservice.dto.response.RegisterResponse;
+import inno.authservice.entity.OutboxEvent;
 import inno.authservice.messaging.UserCreatedEvent;
+import inno.authservice.repository.OutboxEventRepository;
 import inno.authservice.service.UserCredentialsService;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -57,12 +59,23 @@ class UserCreatedEventPublishingIntegrationTest {
     private UserCredentialsService userCredentialsService;
 
     @Autowired
+    private OutboxEventRepository outboxEventRepository;
+
+    @Autowired
     private EmbeddedKafkaBroker broker;
 
     @Test
-    void registrationShouldPublishUserCreatedEventWithCredentialsId() {
+    void registrationShouldPersistOutboxEventAndPublishUserCreatedEventWithCredentialsId() {
         RegisterResponse registered = userCredentialsService.register(
                 "provision_user", "password123");
+
+        OutboxEvent outboxEvent = outboxEventRepository.findAll().stream()
+                .filter(e -> e.getAggregateId().equals(registered.id()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("outbox event not found for " + registered.id()));
+        assertThat(outboxEvent.getEventType()).isEqualTo(OutboxEvent.TYPE_USER_CREATED);
+        assertThat(outboxEvent.getAggregateId()).isEqualTo(registered.id());
+        assertThat(outboxEvent.getPayload()).contains(registered.id().toString());
 
         List<UserCreatedEvent> events = awaitEvents(registered.id(), 1);
 

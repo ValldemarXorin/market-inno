@@ -1,18 +1,21 @@
 package inno.authservice.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import inno.authservice.dto.response.RegisterResponse;
 import inno.authservice.dto.response.UserCredentialsResponse;
+import inno.authservice.entity.OutboxEvent;
 import inno.authservice.entity.Role;
 import inno.authservice.entity.UserCredentials;
 import inno.authservice.exception.custom_exception.LoginAlreadyExistsException;
 import inno.authservice.exception.custom_exception.UserNotFoundException;
 import inno.authservice.mapper.UserCredentialsMapper;
 import inno.authservice.messaging.UserCreatedEvent;
+import inno.authservice.repository.OutboxEventRepository;
 import inno.authservice.repository.RefreshTokenRepository;
 import inno.authservice.repository.UserCredentialsRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -24,10 +27,11 @@ import java.util.UUID;
 public class UserCredentialsService {
 
     private final UserCredentialsRepository userCredentialsRepository;
+    private final OutboxEventRepository outboxEventRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserCredentialsMapper userCredentialsMapper;
     private final RefreshTokenRepository refreshTokenRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public RegisterResponse register(String login, String rawPassword) {
@@ -42,8 +46,22 @@ public class UserCredentialsService {
         user.setActive(true);
 
         UserCredentials saved = userCredentialsRepository.save(user);
-        eventPublisher.publishEvent(new UserCreatedEvent(saved.getId()));
+
+        OutboxEvent outboxEvent = new OutboxEvent();
+        outboxEvent.setEventType(OutboxEvent.TYPE_USER_CREATED);
+        outboxEvent.setAggregateId(saved.getId());
+        outboxEvent.setPayload(toPayload(new UserCreatedEvent(saved.getId())));
+        outboxEventRepository.save(outboxEvent);
+
         return userCredentialsMapper.toRegisterResponse(saved);
+    }
+
+    private String toPayload(UserCreatedEvent event) {
+        try {
+            return objectMapper.writeValueAsString(event);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to serialize UserCreatedEvent", e);
+        }
     }
 
     public List<UserCredentialsResponse> getAll() {
