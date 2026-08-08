@@ -5,15 +5,21 @@ import inno.user_service.dto.request.CreateUserRequest;
 import inno.user_service.dto.request.UpdateUserRequest;
 import inno.user_service.dto.response.UserResponse;
 import inno.user_service.entity.User;
+import inno.user_service.event.UserActivatedEvent;
+import inno.user_service.event.UserCreatedEvent;
+import inno.user_service.event.UserDeactivatedEvent;
 import inno.user_service.exception.custom_exception.EmailAlreadyExistsException;
 import inno.user_service.exception.custom_exception.UserNotFoundException;
 import inno.user_service.mapper.UserMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -37,6 +43,9 @@ public class UserServiceTest {
 
     @Mock
     private UserMapper userMapper;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private UserService userService;
@@ -165,6 +174,102 @@ public class UserServiceTest {
         assertDoesNotThrow(() -> {
             userService.setUserActive(testId, false);
         });
+    }
+
+    @Test
+    public void shouldPublishUserDeactivatedEventWhenUserDeactivated() {
+        doReturn(1).when(userRepository).setActiveNative(testId, false);
+
+        userService.setUserActive(testId, false);
+
+        ArgumentCaptor<UserDeactivatedEvent> captor = ArgumentCaptor.forClass(UserDeactivatedEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertEquals(testId, captor.getValue().userId());
+    }
+
+    @Test
+    public void shouldPublishUserActivatedEventWhenUserActivated() {
+        doReturn(1).when(userRepository).setActiveNative(testId, true);
+
+        userService.setUserActive(testId, true);
+
+        ArgumentCaptor<UserActivatedEvent> captor = ArgumentCaptor.forClass(UserActivatedEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertEquals(testId, captor.getValue().userId());
+    }
+
+    @Test
+    public void shouldNotPublishEventWhenUserNotFound() {
+        doReturn(0).when(userRepository).setActiveNative(testId, false);
+
+        assertThrows(UserNotFoundException.class, () -> {
+            userService.setUserActive(testId, false);
+        });
+
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    public void shouldProvisionUserWithEventUuid() {
+        UUID eventId = UUID.randomUUID();
+        UserCreatedEvent event = new UserCreatedEvent(
+                eventId,
+                testNameVova, testSurnameKhorin,
+                testDateVova, testEmailVova);
+
+        doReturn(false).when(userRepository).existsById(eventId);
+        doReturn(false).when(userRepository).existsByEmail(testEmailVova);
+
+        userService.provisionUser(event);
+
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(captor.capture());
+        assertEquals(eventId, captor.getValue().getId());
+        assertEquals(testEmailVova, captor.getValue().getEmail());
+    }
+
+    @Test
+    public void shouldSkipProvisioningWhenUserAlreadyExists() {
+        UserCreatedEvent event = new UserCreatedEvent(
+                testId,
+                testNameVova, testSurnameKhorin,
+                testDateVova, testEmailVova);
+
+        doReturn(true).when(userRepository).existsById(testId);
+
+        userService.provisionUser(event);
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    public void shouldSkipProvisioningWhenEmailAlreadyExists() {
+        UserCreatedEvent event = new UserCreatedEvent(
+                testId,
+                testNameVova, testSurnameKhorin,
+                testDateVova, testEmailVova);
+
+        doReturn(false).when(userRepository).existsById(testId);
+        doReturn(true).when(userRepository).existsByEmail(testEmailVova);
+
+        userService.provisionUser(event);
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    public void shouldIgnoreDuplicateProvisioningOnConstraintViolation() {
+        UserCreatedEvent event = new UserCreatedEvent(
+                testId,
+                testNameVova, testSurnameKhorin,
+                testDateVova, testEmailVova);
+
+        doReturn(false).when(userRepository).existsById(testId);
+        doReturn(false).when(userRepository).existsByEmail(testEmailVova);
+        doThrow(new DataIntegrityViolationException("duplicate"))
+                .when(userRepository).save(any(User.class));
+
+        assertDoesNotThrow(() -> userService.provisionUser(event));
     }
 
     @Test
