@@ -19,6 +19,9 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.time.LocalDate;
+import java.time.Month;
+
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -60,7 +63,7 @@ class AuthControllerIntegrationTest {
     void shouldVerifyFullAuthFlowWithTokenRotationAndReuseDetection() throws Exception {
 
         RegisterRequest register =
-                new RegisterRequest("integration_user", "password123");
+                registerRequest("integration_user", "password123");
 
         mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -145,7 +148,7 @@ class AuthControllerIntegrationTest {
     void shouldReturnConflict_whenRegisteringDuplicateLogin() throws Exception {
 
         RegisterRequest request =
-                new RegisterRequest("duplicate_user", "password123");
+                registerRequest("duplicate_user", "password123");
 
 
         mockMvc.perform(post("/auth/register")
@@ -168,7 +171,7 @@ class AuthControllerIntegrationTest {
             throws Exception {
 
         RegisterRequest request =
-                new RegisterRequest("short_pwd_user", "1234567");
+                registerRequest("short_pwd_user", "1234567");
 
 
         mockMvc.perform(post("/auth/register")
@@ -186,8 +189,7 @@ class AuthControllerIntegrationTest {
             throws Exception {
 
         RegisterRequest register =
-                new RegisterRequest("wrong_pwd_user",
-                        "password123");
+                registerRequest("wrong_pwd_user", "password123");
 
 
         mockMvc.perform(post("/auth/register")
@@ -219,5 +221,11 @@ class AuthControllerIntegrationTest {
                                 "Bearer not-a-real-token"))
                 .andDo(print())
                 .andExpect(status().isUnauthorized());
+    }
+
+    private RegisterRequest registerRequest(String login, String password) {
+        return new RegisterRequest(
+                login, password, "Ivan", "Ivanov",
+                LocalDate.of(2000, Month.JANUARY, 1), login + "@yandex.ru");
     }
 }

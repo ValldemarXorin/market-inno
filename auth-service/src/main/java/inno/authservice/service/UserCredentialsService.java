@@ -7,12 +7,16 @@ import inno.authservice.entity.UserCredentials;
 import inno.authservice.exception.custom_exception.LoginAlreadyExistsException;
 import inno.authservice.exception.custom_exception.UserNotFoundException;
 import inno.authservice.mapper.UserCredentialsMapper;
+import inno.authservice.messaging.UserCreatedEvent;
+import inno.authservice.repository.RefreshTokenRepository;
 import inno.authservice.repository.UserCredentialsRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -23,9 +27,12 @@ public class UserCredentialsService {
     private final UserCredentialsRepository userCredentialsRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserCredentialsMapper userCredentialsMapper;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
-    public RegisterResponse register(String login, String rawPassword) {
+    public RegisterResponse register(String login, String rawPassword, String username, String surname,
+                                     LocalDate birthDate, String email) {
         if (userCredentialsRepository.existsByLogin(login)) {
             throw new LoginAlreadyExistsException("Login already taken: " + login);
         }
@@ -37,6 +44,8 @@ public class UserCredentialsService {
         user.setActive(true);
 
         UserCredentials saved = userCredentialsRepository.save(user);
+        eventPublisher.publishEvent(new UserCreatedEvent(
+                saved.getId(), username, surname, birthDate, email));
         return userCredentialsMapper.toRegisterResponse(saved);
     }
 
@@ -54,6 +63,7 @@ public class UserCredentialsService {
     @Transactional
     public void deactivate(UUID id) {
         setActive(id, false);
+        refreshTokenRepository.revokeAllByUserCredentialsId(id);
     }
 
     public UserCredentialsResponse getById(UUID id) {

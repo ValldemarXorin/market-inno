@@ -17,6 +17,11 @@ spring:
     open-in-view: false
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: auth-service
+      auto-offset-reset: earliest
 
 auth:
   jwt:
@@ -27,4 +32,10 @@ auth:
     byte-length: ${REFRESH_TOKEN_BYTE_LENGTH:64}
   bcrypt:
     strength: ${BCRYPT_STRENGTH:10}
+
+app:
+  kafka:
+    topic:
+      user-status: user-status-events
+      user-created: user-created-events
 

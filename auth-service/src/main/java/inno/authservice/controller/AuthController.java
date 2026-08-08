@@ -27,7 +27,9 @@ public class AuthController {
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public RegisterResponse register(@Valid @RequestBody RegisterRequest request) {
-        RegisterResponse created = userCredentialsService.register(request.login(), request.password());
+        RegisterResponse created = userCredentialsService.register(
+                request.login(), request.password(), request.username(), request.surname(),
+                request.birthDate(), request.email());
         return new RegisterResponse(created.id(), created.login());
     }
 

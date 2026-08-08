@@ -7,6 +7,8 @@ import inno.authservice.entity.UserCredentials;
 import inno.authservice.exception.custom_exception.LoginAlreadyExistsException;
 import inno.authservice.exception.custom_exception.UserNotFoundException;
 import inno.authservice.mapper.UserCredentialsMapper;
+import inno.authservice.messaging.UserCreatedEvent;
+import inno.authservice.repository.RefreshTokenRepository;
 import inno.authservice.repository.UserCredentialsRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,9 +16,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -31,12 +36,14 @@ class UserCredentialsServiceTest {
     @Mock private UserCredentialsRepository userCredentialsRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private UserCredentialsMapper userCredentialsMapper;
+    @Mock private RefreshTokenRepository refreshTokenRepository;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     private UserCredentialsService userCredentialsService;
 
     @BeforeEach
     void setUp() {
-        userCredentialsService = new UserCredentialsService(userCredentialsRepository, passwordEncoder, userCredentialsMapper);
+        userCredentialsService = new UserCredentialsService(userCredentialsRepository, passwordEncoder, userCredentialsMapper, refreshTokenRepository, eventPublisher);
     }
 
     @Test
@@ -44,14 +51,19 @@ class UserCredentialsServiceTest {
         when(userCredentialsRepository.existsByLogin("john")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("hashed-password");
         when(userCredentialsRepository.save(any(UserCredentials.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+                .thenAnswer(invocation -> {
+                    UserCredentials entity = invocation.getArgument(0);
+                    entity.setId(UUID.randomUUID());
+                    return entity;
+                });
         when(userCredentialsMapper.toRegisterResponse(any(UserCredentials.class)))
                 .thenAnswer(invocation -> {
                     UserCredentials entity = invocation.getArgument(0);
                     return new RegisterResponse(entity.getId(), entity.getLogin());
                 });
 
-        userCredentialsService.register("john", "password123");
+        userCredentialsService.register("john", "password123", "John", "Doe",
+                LocalDate.of(1990, Month.JANUARY, 1), "john@example.com");
 
         ArgumentCaptor<UserCredentials> captor = ArgumentCaptor.forClass(UserCredentials.class);
         verify(userCredentialsRepository).save(captor.capture());
@@ -61,21 +73,32 @@ class UserCredentialsServiceTest {
         assertThat(saved.getPasswordHash()).isEqualTo("hashed-password");
         assertThat(saved.getRole()).isEqualTo(Role.USER);
         assertThat(saved.getActive()).isTrue();
+
+        ArgumentCaptor<UserCreatedEvent> eventCaptor = ArgumentCaptor.forClass(UserCreatedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+        UserCreatedEvent event = eventCaptor.getValue();
+        assertThat(event.userId()).isEqualTo(saved.getId());
+        assertThat(event.username()).isEqualTo("John");
+        assertThat(event.surname()).isEqualTo("Doe");
+        assertThat(event.birthDate()).isEqualTo(LocalDate.of(1990, Month.JANUARY, 1));
+        assertThat(event.email()).isEqualTo("john@example.com");
     }
 
     @Test
     void register_shouldThrowLoginAlreadyExists_whenLoginTaken() {
         when(userCredentialsRepository.existsByLogin("john")).thenReturn(true);
 
-        assertThatThrownBy(() -> userCredentialsService.register("john", "password123"))
+        assertThatThrownBy(() -> userCredentialsService.register("john", "password123",
+                "John", "Doe", LocalDate.of(1990, Month.JANUARY, 1), "john@example.com"))
                 .isInstanceOf(LoginAlreadyExistsException.class);
 
         verify(userCredentialsRepository, never()).save(any());
-        verifyNoInteractions(passwordEncoder);
+        verifyNoInteractions(passwordEncoder, eventPublisher);
     }
 
     @Test
-    void setActive_shouldUpdateActiveFlag_whenUserExists() {
+    void setActive_shouldUpdateActiveFlagAndRevokeTokens_whenUserExists() {
         UUID id = UUID.randomUUID();
         UserCredentials user = new UserCredentials();
         user.setId(id);
@@ -87,6 +110,7 @@ class UserCredentialsServiceTest {
 
         assertThat(user.getActive()).isFalse();
         verify(userCredentialsRepository).save(user);
+        verify(refreshTokenRepository).revokeAllByUserCredentialsId(id);
     }
 
     @Test
@@ -98,6 +122,7 @@ class UserCredentialsServiceTest {
                 .isInstanceOf(UserNotFoundException.class);
 
         verify(userCredentialsRepository, never()).save(any());
+        verify(refreshTokenRepository, never()).revokeAllByUserCredentialsId(any());
     }
 
     @Test
@@ -113,6 +138,7 @@ class UserCredentialsServiceTest {
 
         assertThat(user.getActive()).isTrue();
         verify(userCredentialsRepository).save(user);
+        verify(refreshTokenRepository, never()).revokeAllByUserCredentialsId(any());
     }
 
     @Test
