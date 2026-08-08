@@ -93,18 +93,13 @@ public class UserService {
 
     @Transactional
     public void provisionUser(UserCreatedEvent event) {
-        if (userRepository.existsById(event.userId()) || userRepository.existsByEmail(event.email())) {
-            log.warn("User already exists for provisioning event, skipping: userId={}, email={}",
-                    event.userId(), event.email());
+        if (userRepository.existsById(event.userId())) {
+            log.warn("User already exists for provisioning event, skipping: userId={}", event.userId());
             return;
         }
 
         User user = new User();
         user.setId(event.userId());
-        user.setUsername(event.username());
-        user.setSurname(event.surname());
-        user.setBirthDate(event.birthDate());
-        user.setEmail(event.email());
 
         try {
             userRepository.save(user);

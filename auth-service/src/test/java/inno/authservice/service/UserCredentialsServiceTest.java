@@ -19,25 +19,28 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.Mockito.*;
-import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(MockitoExtension.class)
 class UserCredentialsServiceTest {
 
-    @Mock private UserCredentialsRepository userCredentialsRepository;
-    @Mock private PasswordEncoder passwordEncoder;
-    @Mock private UserCredentialsMapper userCredentialsMapper;
-    @Mock private RefreshTokenRepository refreshTokenRepository;
-    @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private UserCredentialsRepository userCredentialsRepository;
+    @Mock
+    private PasswordEncoder passwordEncoder;
+    @Mock
+    private UserCredentialsMapper userCredentialsMapper;
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     private UserCredentialsService userCredentialsService;
 
@@ -62,8 +65,7 @@ class UserCredentialsServiceTest {
                     return new RegisterResponse(entity.getId(), entity.getLogin());
                 });
 
-        userCredentialsService.register("john", "password123", "John", "Doe",
-                LocalDate.of(1990, Month.JANUARY, 1), "john@example.com");
+        userCredentialsService.register("john", "password123");
 
         ArgumentCaptor<UserCredentials> captor = ArgumentCaptor.forClass(UserCredentials.class);
         verify(userCredentialsRepository).save(captor.capture());
@@ -73,24 +75,48 @@ class UserCredentialsServiceTest {
         assertThat(saved.getPasswordHash()).isEqualTo("hashed-password");
         assertThat(saved.getRole()).isEqualTo(Role.USER);
         assertThat(saved.getActive()).isTrue();
+        assertThat(saved.getId()).isNotNull();
+    }
+
+    @Test
+    void register_shouldPublishUserCreatedEventWithGeneratedUuid() {
+        UUID generatedId = UUID.randomUUID();
+        when(userCredentialsRepository.existsByLogin("john")).thenReturn(false);
+        when(passwordEncoder.encode("password123")).thenReturn("hashed-password");
+        when(userCredentialsRepository.save(any(UserCredentials.class)))
+                .thenAnswer(invocation -> {
+                    UserCredentials entity = invocation.getArgument(0);
+                    entity.setId(generatedId);
+                    return entity;
+                });
+
+        userCredentialsService.register("john", "password123");
 
         ArgumentCaptor<UserCreatedEvent> eventCaptor = ArgumentCaptor.forClass(UserCreatedEvent.class);
         verify(eventPublisher).publishEvent(eventCaptor.capture());
 
         UserCreatedEvent event = eventCaptor.getValue();
-        assertThat(event.userId()).isEqualTo(saved.getId());
-        assertThat(event.username()).isEqualTo("John");
-        assertThat(event.surname()).isEqualTo("Doe");
-        assertThat(event.birthDate()).isEqualTo(LocalDate.of(1990, Month.JANUARY, 1));
-        assertThat(event.email()).isEqualTo("john@example.com");
+        assertThat(event.userId()).isEqualTo(generatedId);
+    }
+
+    @Test
+    void register_shouldNotPublishEvent_whenCredentialsTransactionFails() {
+        when(userCredentialsRepository.existsByLogin("john")).thenReturn(false);
+        when(passwordEncoder.encode("password123")).thenReturn("hashed-password");
+        when(userCredentialsRepository.save(any(UserCredentials.class)))
+                .thenThrow(new RuntimeException("database failure"));
+
+        assertThatThrownBy(() -> userCredentialsService.register("john", "password123"))
+                .isInstanceOf(RuntimeException.class);
+
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
     void register_shouldThrowLoginAlreadyExists_whenLoginTaken() {
         when(userCredentialsRepository.existsByLogin("john")).thenReturn(true);
 
-        assertThatThrownBy(() -> userCredentialsService.register("john", "password123",
-                "John", "Doe", LocalDate.of(1990, Month.JANUARY, 1), "john@example.com"))
+        assertThatThrownBy(() -> userCredentialsService.register("john", "password123"))
                 .isInstanceOf(LoginAlreadyExistsException.class);
 
         verify(userCredentialsRepository, never()).save(any());

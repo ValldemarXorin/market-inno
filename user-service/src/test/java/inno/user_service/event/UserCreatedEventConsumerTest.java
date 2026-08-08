@@ -7,8 +7,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDate;
-import java.time.Month;
 import java.util.UUID;
 
 import static org.mockito.Mockito.verify;
@@ -25,9 +23,7 @@ class UserCreatedEventConsumerTest {
     @Test
     public void shouldDelegateProvisioningToUserService() {
         UUID userId = UUID.randomUUID();
-        UserCreatedEvent event = new UserCreatedEvent(
-                userId, "Masha", "Mashina",
-                LocalDate.of(1998, Month.OCTOBER, 12), "masha@yandex.ru");
+        UserCreatedEvent event = new UserCreatedEvent(userId);
 
         consumer.onUserCreated(event);
 

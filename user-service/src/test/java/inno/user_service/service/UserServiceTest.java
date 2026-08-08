@@ -212,28 +212,24 @@ public class UserServiceTest {
     @Test
     public void shouldProvisionUserWithEventUuid() {
         UUID eventId = UUID.randomUUID();
-        UserCreatedEvent event = new UserCreatedEvent(
-                eventId,
-                testNameVova, testSurnameKhorin,
-                testDateVova, testEmailVova);
+        UserCreatedEvent event = new UserCreatedEvent(eventId);
 
         doReturn(false).when(userRepository).existsById(eventId);
-        doReturn(false).when(userRepository).existsByEmail(testEmailVova);
 
         userService.provisionUser(event);
 
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(captor.capture());
         assertEquals(eventId, captor.getValue().getId());
-        assertEquals(testEmailVova, captor.getValue().getEmail());
+        assertNull(captor.getValue().getUsername());
+        assertNull(captor.getValue().getSurname());
+        assertNull(captor.getValue().getBirthDate());
+        assertNull(captor.getValue().getEmail());
     }
 
     @Test
     public void shouldSkipProvisioningWhenUserAlreadyExists() {
-        UserCreatedEvent event = new UserCreatedEvent(
-                testId,
-                testNameVova, testSurnameKhorin,
-                testDateVova, testEmailVova);
+        UserCreatedEvent event = new UserCreatedEvent(testId);
 
         doReturn(true).when(userRepository).existsById(testId);
 
@@ -243,29 +239,10 @@ public class UserServiceTest {
     }
 
     @Test
-    public void shouldSkipProvisioningWhenEmailAlreadyExists() {
-        UserCreatedEvent event = new UserCreatedEvent(
-                testId,
-                testNameVova, testSurnameKhorin,
-                testDateVova, testEmailVova);
-
-        doReturn(false).when(userRepository).existsById(testId);
-        doReturn(true).when(userRepository).existsByEmail(testEmailVova);
-
-        userService.provisionUser(event);
-
-        verify(userRepository, never()).save(any());
-    }
-
-    @Test
     public void shouldIgnoreDuplicateProvisioningOnConstraintViolation() {
-        UserCreatedEvent event = new UserCreatedEvent(
-                testId,
-                testNameVova, testSurnameKhorin,
-                testDateVova, testEmailVova);
+        UserCreatedEvent event = new UserCreatedEvent(testId);
 
         doReturn(false).when(userRepository).existsById(testId);
-        doReturn(false).when(userRepository).existsByEmail(testEmailVova);
         doThrow(new DataIntegrityViolationException("duplicate"))
                 .when(userRepository).save(any(User.class));
 

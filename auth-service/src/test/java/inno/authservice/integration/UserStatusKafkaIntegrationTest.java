@@ -71,10 +71,7 @@ class UserStatusKafkaIntegrationTest {
     @Test
     void deactivationShouldBlockLoginAndRefresh_thenActivationRestoresLogin() throws Exception {
         RegisterResponse registered =
-                userCredentialsService.register("kafka_integration_user", "password123",
-                        "Masha", "Mashina",
-                        java.time.LocalDate.of(1998, java.time.Month.OCTOBER, 12),
-                        "kafka_integration_user@yandex.ru");
+                userCredentialsService.register("kafka_integration_user", "password123");
 
         TokenPairResponse tokens =
                 authService.login("kafka_integration_user", "password123");

@@ -16,7 +16,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,8 +30,7 @@ public class UserCredentialsService {
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
-    public RegisterResponse register(String login, String rawPassword, String username, String surname,
-                                     LocalDate birthDate, String email) {
+    public RegisterResponse register(String login, String rawPassword) {
         if (userCredentialsRepository.existsByLogin(login)) {
             throw new LoginAlreadyExistsException("Login already taken: " + login);
         }
@@ -44,8 +42,7 @@ public class UserCredentialsService {
         user.setActive(true);
 
         UserCredentials saved = userCredentialsRepository.save(user);
-        eventPublisher.publishEvent(new UserCreatedEvent(
-                saved.getId(), username, surname, birthDate, email));
+        eventPublisher.publishEvent(new UserCreatedEvent(saved.getId()));
         return userCredentialsMapper.toRegisterResponse(saved);
     }
 

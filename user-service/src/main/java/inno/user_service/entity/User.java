@@ -23,16 +23,16 @@ public class User extends BaseEntity{
     @UuidGenerator(style = UuidGenerator.Style.TIME)
     private UUID id;
 
-    @Column(nullable = false, length = 100)
+    @Column(length = 100)
     private String username;
 
-    @Column(nullable = false, length = 100)
+    @Column(length = 100)
     private String surname;
 
-    @Column(name = "birth_date", nullable = false)
+    @Column(name = "birth_date")
     private LocalDate birthDate;
 
-    @Column(nullable = false, unique = true, length = 255)
+    @Column(unique = true, length = 255)
     private String email;
 
     @Column(nullable = false)

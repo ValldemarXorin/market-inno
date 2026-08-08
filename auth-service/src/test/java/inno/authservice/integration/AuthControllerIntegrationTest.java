@@ -19,9 +19,6 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.time.LocalDate;
-import java.time.Month;
-
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -224,8 +221,6 @@ class AuthControllerIntegrationTest {
     }
 
     private RegisterRequest registerRequest(String login, String password) {
-        return new RegisterRequest(
-                login, password, "Ivan", "Ivanov",
-                LocalDate.of(2000, Month.JANUARY, 1), login + "@yandex.ru");
+        return new RegisterRequest(login, password);
     }
 }

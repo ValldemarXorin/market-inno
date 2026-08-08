@@ -1,6 +1,5 @@
 package inno.authservice.integration;
 
-import inno.authservice.dto.request.RegisterRequest;
 import inno.authservice.dto.response.RegisterResponse;
 import inno.authservice.messaging.UserCreatedEvent;
 import inno.authservice.service.UserCredentialsService;
@@ -63,19 +62,13 @@ class UserCreatedEventPublishingIntegrationTest {
     @Test
     void registrationShouldPublishUserCreatedEventWithCredentialsId() {
         RegisterResponse registered = userCredentialsService.register(
-                "provision_user", "password123", "Masha", "Mashina",
-                java.time.LocalDate.of(1998, java.time.Month.OCTOBER, 12),
-                "masha-provision@yandex.ru");
+                "provision_user", "password123");
 
         List<UserCreatedEvent> events = awaitEvents(registered.id(), 1);
 
         assertThat(events).hasSize(1);
         UserCreatedEvent event = events.get(0);
         assertThat(event.userId()).isEqualTo(registered.id());
-        assertThat(event.username()).isEqualTo("Masha");
-        assertThat(event.surname()).isEqualTo("Mashina");
-        assertThat(event.birthDate()).isEqualTo(java.time.LocalDate.of(1998, java.time.Month.OCTOBER, 12));
-        assertThat(event.email()).isEqualTo("masha-provision@yandex.ru");
     }
 
     private List<UserCreatedEvent> awaitEvents(UUID userId, int expectedCount) {

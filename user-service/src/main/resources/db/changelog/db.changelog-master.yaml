@@ -7,3 +7,6 @@ databaseChangeLog:
       relativeToChangelogFile: false
   - include:
       file: db/changelog/changes/003-add-unique-constraint-on-card-number.yaml
+  - include:
+      file: db/changelog/changes/004-make-users-profile-fields-nullable.yaml
+      relativeToChangelogFile: false
