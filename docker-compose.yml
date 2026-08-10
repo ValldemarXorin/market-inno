@@ -1,6 +1,5 @@
 services:
-  # Single Kafka broker shared by all services in the monorepo.
-  # Service-specific compose files must NOT define their own Kafka broker.
+  # Single Kafka broker shared by all services in the monorepo
   kafka:
     image: apache/kafka:3.7.0
     ports:

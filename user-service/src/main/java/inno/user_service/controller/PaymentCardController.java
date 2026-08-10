@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -21,6 +22,7 @@ public class PaymentCardController {
     private final PaymentCardService paymentCardService;
 
     @PostMapping("/users/{userId}/cards")
+    @PreAuthorize("hasRole('ADMIN') or @resourceSecurity.isSelf(authentication, #userId)")
     public ResponseEntity<PaymentCardResponse> createPaymentCard(
             @PathVariable UUID userId,
             @Valid @RequestBody CreatePaymentCardRequest createPaymentCardRequest) {
@@ -31,6 +33,7 @@ public class PaymentCardController {
     }
 
     @GetMapping("/users/{userId}/cards")
+    @PreAuthorize("hasRole('ADMIN') or @resourceSecurity.isSelf(authentication, #userId)")
     public ResponseEntity<Page<PaymentCardResponse>> getPaymentCardsByUserId(
             @PathVariable UUID userId,
             Pageable pageable) {
@@ -38,11 +41,13 @@ public class PaymentCardController {
     }
 
     @GetMapping("/cards/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @resourceSecurity.isCardOwner(authentication, #id)")
     public ResponseEntity<PaymentCardResponse> getPaymentCardById(@PathVariable UUID id) {
         return ResponseEntity.ok(paymentCardService.getPaymentCardById(id));
     }
 
     @GetMapping("/cards")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<PaymentCardResponse>> getAllPaymentCards(
             @RequestParam(required = false) String username,
             @RequestParam(required = false) String surname,
@@ -51,6 +56,7 @@ public class PaymentCardController {
     }
 
     @PutMapping("/cards/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @resourceSecurity.isCardOwner(authentication, #id)")
     public ResponseEntity<PaymentCardResponse> updatePaymentCard(
             @PathVariable UUID id,
             @Valid @RequestBody UpdatePaymentCardRequest updatePaymentCardRequest) {
@@ -58,6 +64,7 @@ public class PaymentCardController {
     }
 
     @PatchMapping("/cards/{id}/active")
+    @PreAuthorize("hasRole('ADMIN') or @resourceSecurity.isCardOwner(authentication, #id)")
     public ResponseEntity<Void> setPaymentCardActive(
             @PathVariable UUID id,
             @Valid @RequestBody SetActiveRequest setActiveRequest) {
@@ -66,6 +73,7 @@ public class PaymentCardController {
     }
 
     @DeleteMapping("/cards/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @resourceSecurity.isCardOwner(authentication, #id)")
     public ResponseEntity<Void> deletePaymentCard(@PathVariable UUID id) {
         paymentCardService.deletePaymentCard(id);
         return ResponseEntity.noContent().build();

@@ -20,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -151,7 +152,7 @@ class AuthServiceTest {
         stored.setUserCredentials(activeUser);
         stored.setFamilyId(UUID.randomUUID());
         stored.setRevoked(false);
-        stored.setExpiresAt(LocalDateTime.now().minusMinutes(1));
+        stored.setExpiresAt(LocalDateTime.now(ZoneId.of("UTC")).minusMinutes(1));
 
         when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(stored));
 

@@ -55,6 +55,8 @@ public class UserControllerIntegrationTest {
         registry.add("spring.data.redis.port", () -> myRedis.getMappedPort(6379));
 
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
+
+        registry.add("auth.jwt.secret", () -> TestTokens.SECRET);
     }
 
     @Test
@@ -77,16 +79,19 @@ public class UserControllerIntegrationTest {
         UserResponse createdUser = objectMapper.readValue(responseContent, UserResponse.class);
         String idFromDb = createdUser.id().toString();
 
-        mockMvc.perform(get("/users/" + idFromDb))
+        mockMvc.perform(get("/users/" + idFromDb)
+                        .header("Authorization", "Bearer " + TestTokens.adminToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(idFromDb))
                 .andExpect(jsonPath("$.username").value("Masha"));
 
-        mockMvc.perform(get("/users/" + idFromDb))
+        mockMvc.perform(get("/users/" + idFromDb)
+                        .header("Authorization", "Bearer " + TestTokens.adminToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(idFromDb));
 
-        mockMvc.perform(get("/users/00000000-0000-0000-0000-000000000000"))
+        mockMvc.perform(get("/users/00000000-0000-0000-0000-000000000000")
+                        .header("Authorization", "Bearer " + TestTokens.adminToken()))
                 .andExpect(status().isNotFound());
     }
 }
