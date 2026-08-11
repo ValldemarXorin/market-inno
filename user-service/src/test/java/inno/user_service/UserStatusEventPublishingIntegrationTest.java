@@ -58,6 +58,8 @@ class UserStatusEventPublishingIntegrationTest {
         registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
 
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
+
+        registry.add("auth.jwt.secret", () -> TestTokens.SECRET);
     }
 
     @Autowired
