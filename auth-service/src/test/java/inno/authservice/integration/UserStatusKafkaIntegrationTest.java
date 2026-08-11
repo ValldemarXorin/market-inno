@@ -8,6 +8,7 @@ import inno.authservice.messaging.UserStatusEvent;
 import inno.authservice.repository.RefreshTokenRepository;
 import inno.authservice.service.AuthService;
 import inno.authservice.service.UserCredentialsService;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,6 +24,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.function.Supplier;
 
@@ -99,14 +101,11 @@ class UserStatusKafkaIntegrationTest {
         assertThat(authService.login("kafka_integration_user", "password123")).isNotNull();
     }
 
-    private void await(Supplier<Boolean> condition) throws InterruptedException {
-        for (int i = 0; i < 100; i++) {
-            if (condition.get()) {
-                return;
-            }
-            Thread.sleep(100);
-        }
-        fail("condition not met within timeout");
+    private void await(Supplier<Boolean> condition) {
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(10))
+                .pollInterval(Duration.ofMillis(100))
+                .until(condition::get);
     }
 
     private String hash(String raw) {
