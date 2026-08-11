@@ -218,13 +218,7 @@ public class UserServiceTest {
 
         userService.provisionUser(event);
 
-        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository).save(captor.capture());
-        assertEquals(eventId, captor.getValue().getId());
-        assertNull(captor.getValue().getUsername());
-        assertNull(captor.getValue().getSurname());
-        assertNull(captor.getValue().getBirthDate());
-        assertNull(captor.getValue().getEmail());
+        verify(userRepository).insertProvisionedUser(eventId);
     }
 
     @Test
@@ -235,7 +229,7 @@ public class UserServiceTest {
 
         userService.provisionUser(event);
 
-        verify(userRepository, never()).save(any());
+        verify(userRepository, never()).insertProvisionedUser(any());
     }
 
     @Test
@@ -244,7 +238,7 @@ public class UserServiceTest {
 
         doReturn(false).when(userRepository).existsById(testId);
         doThrow(new DataIntegrityViolationException("duplicate"))
-                .when(userRepository).save(any(User.class));
+                .when(userRepository).insertProvisionedUser(testId);
 
         assertDoesNotThrow(() -> userService.provisionUser(event));
     }

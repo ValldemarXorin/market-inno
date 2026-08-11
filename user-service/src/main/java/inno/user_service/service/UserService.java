@@ -98,11 +98,8 @@ public class UserService {
             return;
         }
 
-        User user = new User();
-        user.setId(event.userId());
-
         try {
-            userRepository.save(user);
+            userRepository.insertProvisionedUser(event.userId());
         } catch (DataIntegrityViolationException e) {
             log.warn("Duplicate provisioning attempt ignored: userId={}", event.userId(), e);
         }

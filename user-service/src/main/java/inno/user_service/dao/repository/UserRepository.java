@@ -41,4 +41,12 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
     @Transactional
     @Query(value = "UPDATE users SET active = :active, updated_at = now() WHERE id = :id", nativeQuery = true)
     int setActiveNative(@Param("id") UUID id, @Param("active") boolean active);
+
+    @Modifying
+    @Transactional
+    @Query(value = """
+            INSERT INTO users (id, active, created_at, updated_at)
+            VALUES (:id, true, now(), now())
+            """, nativeQuery = true)
+    int insertProvisionedUser(@Param("id") UUID id);
 }
