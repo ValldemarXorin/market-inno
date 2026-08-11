@@ -8,14 +8,20 @@ import inno.user_service.dto.request.CreateUserRequest;
 import inno.user_service.dto.request.UpdateUserRequest;
 import inno.user_service.dto.response.UserResponse;
 import inno.user_service.entity.User;
+import inno.user_service.event.UserActivatedEvent;
+import inno.user_service.event.UserCreatedEvent;
+import inno.user_service.event.UserDeactivatedEvent;
 import inno.user_service.exception.custom_exception.EmailAlreadyExistsException;
 import inno.user_service.exception.custom_exception.UserNotFoundException;
 import inno.user_service.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -23,11 +29,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @CachePut(cacheNames = CacheNames.USERS_CACHE, key = "#result.id")
     public UserResponse createUser(CreateUserRequest createUserRequest) {
@@ -76,6 +84,24 @@ public class UserService {
 
         if (updated == 0) {
             throw new UserNotFoundException(id);
+        }
+
+        eventPublisher.publishEvent(
+                isActive ? new UserActivatedEvent(id) : new UserDeactivatedEvent(id)
+        );
+    }
+
+    @Transactional
+    public void provisionUser(UserCreatedEvent event) {
+        if (userRepository.existsById(event.userId())) {
+            log.warn("User already exists for provisioning event, skipping: userId={}", event.userId());
+            return;
+        }
+
+        try {
+            userRepository.insertProvisionedUser(event.userId());
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Duplicate provisioning attempt ignored: userId={}", event.userId(), e);
         }
     }
 

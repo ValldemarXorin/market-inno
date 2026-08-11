@@ -8,7 +8,7 @@ on:
   pull_request:
     paths:
       - "user-service/**"
-    branches: [ "main", "master" ]
+    branches: [ "main", "develop" ]
 
 jobs:
   pipeline-execution:

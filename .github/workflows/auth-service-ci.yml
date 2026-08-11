@@ -1,0 +1,54 @@
+name: Auth Service CI Pipeline
+
+on:
+  push:
+    paths:
+      - "auth-service/**"
+    branches: [ "main", "develop" ]
+  pull_request:
+    paths:
+      - "auth-service/**"
+    branches: [ "main", "develop" ]
+
+jobs:
+  pipeline-execution:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 23 Environment
+        uses: actions/setup-java@v4
+        with:
+          java-version: '23'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Grant executable rights for Gradle
+        run: chmod +x ./auth-service/gradlew
+
+      - name: Step 1 - Build Application
+        run: ./auth-service/gradlew -p auth-service compileJava --no-daemon
+
+      - name: Step 2 - Run Unit and Integration Tests
+        run: ./auth-service/gradlew -p auth-service test jacocoTestReport --no-daemon
+
+      - name: Step 3 - SonarQube Code Analysis
+        uses: sonarsource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        with:
+          args: >
+            -Dsonar.projectKey=market-inno-auth-service
+            -Dsonar.organization=valldemarxorin
+            -Dsonar.sources=auth-service/src/main/java
+            -Dsonar.tests=auth-service/src/test/java
+            -Dsonar.coverage.jacoco.xmlReportPaths=auth-service/build/reports/jacoco/test/jacocoTestReport.xml
+            -Dsonar.coverage.exclusions=**/dto/**,**/config/**,**/exception/**,**/*Application.java,**/*MapperImpl.java,**/security/JwtValidationProperties.java
+
+      - name: Step 4 - Build Final Docker Image Artefact
+        run: docker build -t auth-service-app:latest ./auth-service

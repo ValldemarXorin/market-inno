@@ -1,0 +1,21 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-make-users-profile-fields-nullable
+      author: user-service
+      changes:
+        - dropNotNullConstraint:
+            tableName: users
+            columnName: username
+            columnDataType: VARCHAR(100)
+        - dropNotNullConstraint:
+            tableName: users
+            columnName: surname
+            columnDataType: VARCHAR(100)
+        - dropNotNullConstraint:
+            tableName: users
+            columnName: birth_date
+            columnDataType: DATE
+        - dropNotNullConstraint:
+            tableName: users
+            columnName: email
+            columnDataType: VARCHAR(255)

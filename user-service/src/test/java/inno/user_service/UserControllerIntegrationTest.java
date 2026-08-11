@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -25,7 +26,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.LocalDate;
 import java.time.Month;
 
-@SpringBootTest
+@SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
+@EmbeddedKafka(partitions = 1, topics = {"user-created-events", "user-status-events"})
 @AutoConfigureMockMvc
 @Testcontainers
 public class UserControllerIntegrationTest {
@@ -55,6 +57,8 @@ public class UserControllerIntegrationTest {
         registry.add("spring.data.redis.port", () -> myRedis.getMappedPort(6379));
 
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
+
+        registry.add("auth.jwt.secret", () -> TestTokens.SECRET);
     }
 
     @Test
@@ -77,16 +81,19 @@ public class UserControllerIntegrationTest {
         UserResponse createdUser = objectMapper.readValue(responseContent, UserResponse.class);
         String idFromDb = createdUser.id().toString();
 
-        mockMvc.perform(get("/users/" + idFromDb))
+        mockMvc.perform(get("/users/" + idFromDb)
+                        .header("Authorization", "Bearer " + TestTokens.adminToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(idFromDb))
                 .andExpect(jsonPath("$.username").value("Masha"));
 
-        mockMvc.perform(get("/users/" + idFromDb))
+        mockMvc.perform(get("/users/" + idFromDb)
+                        .header("Authorization", "Bearer " + TestTokens.adminToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(idFromDb));
 
-        mockMvc.perform(get("/users/00000000-0000-0000-0000-000000000000"))
+        mockMvc.perform(get("/users/00000000-0000-0000-0000-000000000000")
+                        .header("Authorization", "Bearer " + TestTokens.adminToken()))
                 .andExpect(status().isNotFound());
     }
 }

@@ -15,6 +15,12 @@ spring:
   cache:
     type: redis
 
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: user-service
+      auto-offset-reset: earliest
+
 logging:
   level:
     org.hibernate.SQL: DEBUG
@@ -22,3 +28,7 @@ logging:
 app:
   cache:
     expiration-minutes: 20
+  kafka:
+    topic:
+      user-status: user-status-events
+      user-created: user-created-events

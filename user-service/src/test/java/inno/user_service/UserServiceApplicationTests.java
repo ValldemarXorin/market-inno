@@ -3,6 +3,7 @@ package inno.user_service;
 import com.redis.testcontainers.RedisContainer;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -10,7 +11,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
-@SpringBootTest
+@SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
+@EmbeddedKafka(partitions = 1, topics = {"user-created-events", "user-status-events"})
 @Testcontainers
 class UserServiceApplicationTests {
 
@@ -32,6 +34,8 @@ class UserServiceApplicationTests {
 
 		registry.add("spring.data.redis.host", redis::getHost);
 		registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
+
+		registry.add("auth.jwt.secret", () -> TestTokens.SECRET);
 	}
 
 	@Test
