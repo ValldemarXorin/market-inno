@@ -54,6 +54,9 @@ dependencies {
 
 	implementation 'org.springframework.kafka:spring-kafka'
 
+	// Circuit breaker for synchronous Order -> User communication
+	implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.3.0'
+
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 

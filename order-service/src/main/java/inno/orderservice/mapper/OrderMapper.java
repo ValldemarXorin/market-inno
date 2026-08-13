@@ -4,6 +4,7 @@ import inno.orderservice.dto.request.CreateOrderRequest;
 import inno.orderservice.dto.request.OrderItemRequest;
 import inno.orderservice.dto.response.OrderItemResponse;
 import inno.orderservice.dto.response.OrderResponse;
+import inno.orderservice.dto.response.UserResponse;
 import inno.orderservice.entity.Order;
 import inno.orderservice.entity.OrderItem;
 import org.mapstruct.Mapper;
@@ -28,10 +29,15 @@ public interface OrderMapper {
     OrderItem toEntity(OrderItemRequest request);
 
     @Mapping(target = "items", source = "orderItems")
+    @Mapping(target = "user", ignore = true)
     OrderResponse toResponse(Order order);
 
     @Mapping(target = "itemId", source = "item.id")
     @Mapping(target = "itemName", source = "item.name")
     @Mapping(target = "price", source = "item.price")
     OrderItemResponse toResponse(OrderItem orderItem);
+
+    @Mapping(target = "id", source = "order.id")
+    @Mapping(target = "user", source = "user")
+    OrderResponse toResponse(OrderResponse order, UserResponse user);
 }

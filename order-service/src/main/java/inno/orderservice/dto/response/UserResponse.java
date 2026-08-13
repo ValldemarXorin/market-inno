@@ -1,0 +1,17 @@
+package inno.orderservice.dto.response;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+public record UserResponse(
+        UUID id,
+        String username,
+        String surname,
+        LocalDate birthDate,
+        String email,
+        Boolean active,
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
+) {
+}

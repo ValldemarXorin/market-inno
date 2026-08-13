@@ -82,9 +82,7 @@ public class OrderServiceTest {
 
         testOrderResponse = new OrderResponse(
                 testOrderId, testUserId, OrderStatus.CREATED,
-                new BigDecimal("30.00"), false, List.of(),
-                LocalDateTime.of(2026, Month.JANUARY, 1, 12, 0),
-                LocalDateTime.of(2026, Month.JANUARY, 1, 12, 0));
+                new BigDecimal("30.00"), false, List.of(), null);
     }
 
     @Test
