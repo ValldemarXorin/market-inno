@@ -1,6 +1,7 @@
 package inno.orderservice.service;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import inno.orderservice.TestTokens;
 import inno.orderservice.dao.repository.ItemRepository;
 import inno.orderservice.dao.repository.OrderRepository;
 import inno.orderservice.dto.request.CreateOrderRequest;
@@ -61,6 +62,8 @@ class OrderServiceIntegrationTest {
         registry.add("spring.datasource.password", postgres::getPassword);
 
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
+
+        registry.add("auth.jwt.secret", () -> TestTokens.SECRET);
 
         registry.add("app.user-service.base-url", () -> "http://localhost:" + wireMockServer.port());
     }

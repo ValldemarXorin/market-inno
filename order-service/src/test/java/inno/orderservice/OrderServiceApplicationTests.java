@@ -27,6 +27,8 @@ class OrderServiceApplicationTests {
 		registry.add("spring.datasource.password", postgres::getPassword);
 
 		registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
+
+		registry.add("auth.jwt.secret", () -> TestTokens.SECRET);
 	}
 
 	@Test

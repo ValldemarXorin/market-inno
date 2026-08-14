@@ -1,5 +1,6 @@
 package inno.orderservice.event;
 
+import inno.orderservice.TestTokens;
 import inno.orderservice.dao.repository.OrderRepository;
 import inno.orderservice.entity.Order;
 import inno.orderservice.entity.OrderStatus;
@@ -54,6 +55,8 @@ class PaymentCreatedEventKafkaIntegrationTest {
         registry.add("spring.datasource.password", postgres::getPassword);
 
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
+
+        registry.add("auth.jwt.secret", () -> TestTokens.SECRET);
     }
 
     @Autowired
