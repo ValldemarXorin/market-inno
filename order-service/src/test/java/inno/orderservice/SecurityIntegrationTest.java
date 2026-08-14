@@ -1,7 +1,11 @@
 package inno.orderservice;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
+import inno.orderservice.dao.repository.ItemRepository;
 import inno.orderservice.dao.repository.OrderRepository;
+import inno.orderservice.dto.response.OrderResponse;
+import inno.orderservice.entity.Item;
 import inno.orderservice.entity.Order;
 import inno.orderservice.entity.OrderStatus;
 import org.junit.jupiter.api.AfterAll;
@@ -10,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -26,6 +31,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Testcontainers
@@ -68,6 +74,11 @@ class SecurityIntegrationTest {
 
     @Autowired
     private OrderRepository orderRepository;
+
+    @Autowired
+    private ItemRepository itemRepository;
+
+    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     @BeforeEach
     void setUp() {
@@ -119,9 +130,39 @@ class SecurityIntegrationTest {
                         .header("Authorization", "Bearer " + TestTokens.token(adminId, "ADMIN")))
                 .andExpect(status().isOk());
 
+        mockMvc.perform(get("/users/" + adminId + "/orders")
+                        .header("Authorization", "Bearer " + TestTokens.token(adminId, "ADMIN")))
+                .andExpect(status().isOk());
+
         mockMvc.perform(delete("/orders/" + order.getId())
                         .header("Authorization", "Bearer " + TestTokens.token(adminId, "ADMIN")))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void adminShouldCreateAndUpdateOrder() throws Exception {
+        UUID adminId = UUID.randomUUID();
+        String token = TestTokens.token(adminId, "ADMIN");
+        Item item = createItem();
+
+        String created = mockMvc.perform(post("/orders")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"vova@gmail.com","items":[{"itemId":"%s","quantity":3}]}
+                                """.formatted(item.getId())))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        OrderResponse createdOrder = objectMapper.readValue(created, OrderResponse.class);
+
+        mockMvc.perform(put("/orders/" + createdOrder.id())
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"status":"PROCESSING","items":[{"itemId":"%s","quantity":2}]}
+                                """.formatted(item.getId())))
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -164,5 +205,12 @@ class SecurityIntegrationTest {
         order.setStatus(OrderStatus.CREATED);
         order.setTotalPrice(new BigDecimal("30.00"));
         return orderRepository.save(order);
+    }
+
+    private Item createItem() {
+        Item item = new Item();
+        item.setName("test item");
+        item.setPrice(new BigDecimal("10.00"));
+        return itemRepository.save(item);
     }
 }
