@@ -1,0 +1,54 @@
+name: Order Service CI Pipeline
+
+on:
+  push:
+    paths:
+      - "order-service/**"
+    branches: [ "main", "develop" ]
+  pull_request:
+    paths:
+      - "order-service/**"
+    branches: [ "main", "develop" ]
+
+jobs:
+  pipeline-execution:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 23 Environment
+        uses: actions/setup-java@v4
+        with:
+          java-version: '23'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Grant executable rights for Gradle
+        run: chmod +x ./order-service/gradlew
+
+      - name: Step 1 - Build Application
+        run: ./order-service/gradlew -p order-service compileJava --no-daemon
+
+      - name: Step 2 - Run Unit and Integration Tests
+        run: ./order-service/gradlew -p order-service test jacocoTestReport --no-daemon
+
+      - name: Step 3 - SonarQube Code Analysis
+        uses: sonarsource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        with:
+          args: >
+            -Dsonar.projectKey=market-inno-order-service
+            -Dsonar.organization=valldemarxorin
+            -Dsonar.sources=order-service/src/main/java
+            -Dsonar.tests=order-service/src/test/java
+            -Dsonar.coverage.jacoco.xmlReportPaths=order-service/build/reports/jacoco/test/jacocoTestReport.xml
+            -Dsonar.coverage.exclusions=**/dto/**,**/config/**,**/exception/**,**/dao/**,**/*Application.java,**/*MapperImpl.java
+
+      - name: Step 4 - Build Final Docker Image Artefact
+        run: docker build -t order-service-app:latest ./order-service
