@@ -25,6 +25,10 @@ app:
     topic:
       payment-created: payment-created-events
 
+auth:
+  jwt:
+    secret: ${JWT_SECRET}
+
 resilience4j:
   retry:
     instances:

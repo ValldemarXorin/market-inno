@@ -12,6 +12,7 @@ services:
       - .env
     environment:
       - SPRING_PROFILES_ACTIVE=docker
+      - JWT_SECRET=${JWT_SECRET}
 
   postgres-db:
     image: postgres:17

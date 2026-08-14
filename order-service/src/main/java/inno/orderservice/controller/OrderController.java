@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -44,11 +45,13 @@ public class OrderController {
     }
 
     @GetMapping("/orders/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @resourceSecurity.isOrderOwner(authentication, #id)")
     public ResponseEntity<OrderResponse> getOrderById(@PathVariable UUID id) {
         return ResponseEntity.ok(enrich(orderService.getOrderById(id)));
     }
 
     @GetMapping("/orders")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<OrderResponse>> getOrders(
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
@@ -61,6 +64,7 @@ public class OrderController {
     }
 
     @GetMapping("/users/{userId}/orders")
+    @PreAuthorize("hasRole('ADMIN') or @resourceSecurity.isSelf(authentication, #userId)")
     public ResponseEntity<Page<OrderResponse>> getOrdersByUserId(
             @PathVariable UUID userId,
             Pageable pageable) {
@@ -69,6 +73,7 @@ public class OrderController {
     }
 
     @PutMapping("/orders/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @resourceSecurity.isOrderOwner(authentication, #id)")
     public ResponseEntity<OrderResponse> updateOrder(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateOrderRequest updateOrderRequest) {
@@ -76,6 +81,7 @@ public class OrderController {
     }
 
     @DeleteMapping("/orders/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteOrder(@PathVariable UUID id) {
         orderService.deleteOrder(id);
         return ResponseEntity.noContent().build();

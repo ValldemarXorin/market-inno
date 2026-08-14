@@ -17,6 +17,9 @@ public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecific
 
     Optional<Order> findByIdAndDeletedFalse(UUID id);
 
+    @Query("select o.userId from Order o where o.id = :id")
+    Optional<UUID> findUserIdById(@Param("id") UUID id);
+
     @Modifying
     @Transactional
     @Query("""
