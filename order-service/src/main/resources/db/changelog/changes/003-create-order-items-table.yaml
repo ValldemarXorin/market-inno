@@ -53,10 +53,9 @@ databaseChangeLog:
             referencedColumnNames: id
             constraintName: fk_order_items_item_id
 
-        - addCheckConstraint:
-            constraintName: ck_order_items_quantity
-            tableName: order_items
-            condition: quantity > 0
+        - sql:
+            dbms: postgresql
+            sql: ALTER TABLE order_items ADD CONSTRAINT ck_order_items_quantity CHECK (quantity > 0)
 
         - createIndex:
             indexName: idx_order_items_order_id
