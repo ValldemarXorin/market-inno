@@ -1,7 +1,6 @@
 package inno.orderservice.client;
 
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpServer;
+import com.github.tomakehurst.wiremock.WireMockServer;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
@@ -27,14 +26,11 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -76,9 +72,7 @@ class UserServiceResilienceIntegrationTest {
     @Autowired
     private CircuitBreakerRegistry circuitBreakerRegistry;
 
-    private static HttpServer server;
-    private static final AtomicReference<HandlerMode> mode = new AtomicReference<>(HandlerMode.ALWAYS_500);
-    private static final AtomicInteger requests = new AtomicInteger();
+    private static WireMockServer wireMockServer;
 
     private static final String EMAIL = "vova@gmail.com";
     private static final String USER_JSON = """
@@ -89,28 +83,22 @@ class UserServiceResilienceIntegrationTest {
 
     @DynamicPropertySource
     static void startServer(DynamicPropertyRegistry registry) {
-        try {
-            server = HttpServer.create(new InetSocketAddress(0), 0);
-            server.createContext("/", UserServiceResilienceIntegrationTest::handle);
-            server.start();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        int port = server.getAddress().getPort();
-        registry.add("app.user-service.base-url", () -> "http://localhost:" + port);
+        wireMockServer = new WireMockServer(0);
+        wireMockServer.start();
+        registry.add("app.user-service.base-url", () -> "http://localhost:" + wireMockServer.port());
     }
 
     @AfterAll
     static void stopServer() {
-        if (server != null) {
-            server.stop(0);
+        if (wireMockServer != null) {
+            wireMockServer.stop();
         }
     }
 
     @BeforeEach
     void reset() {
-        requests.set(0);
-        mode.set(HandlerMode.ALWAYS_500);
+        wireMockServer.resetAll();
+        stubUserService(HandlerMode.ALWAYS_500);
         circuitBreakerRegistry.circuitBreaker("userService").reset();
     }
 
@@ -148,28 +136,28 @@ class UserServiceResilienceIntegrationTest {
 
     @Test
     void shouldRetryTransientFailuresAndReturnUser() {
-        mode.set(HandlerMode.SUCCESS_AFTER_FAILURES);
+        stubUserService(HandlerMode.SUCCESS_AFTER_FAILURES);
 
         UserResponse user = userServiceClient.getUserByEmail(EMAIL);
 
         assertNotNull(user);
         assertEquals(EMAIL, user.email());
-        assertEquals(3, requests.get());
+        assertEquals(3, wireMockServer.getAllServeEvents().size());
     }
 
     @Test
     void shouldNotRetryClientError() {
-        mode.set(HandlerMode.ALWAYS_404);
+        stubUserService(HandlerMode.ALWAYS_404);
 
         UserResponse user = userServiceClient.getUserByEmail(EMAIL);
 
         assertNull(user);
-        assertEquals(1, requests.get());
+        assertEquals(1, wireMockServer.getAllServeEvents().size());
     }
 
     @Test
     void shouldOpenCircuitBreakerAndFallBackToNull() {
-        mode.set(HandlerMode.ALWAYS_500);
+        stubUserService(HandlerMode.ALWAYS_500);
 
         for (int i = 0; i < 2; i++) {
             assertNull(userServiceClient.getUserByEmail(EMAIL));
@@ -178,47 +166,79 @@ class UserServiceResilienceIntegrationTest {
         CircuitBreaker circuitBreaker = circuitBreakerRegistry.circuitBreaker("userService");
         assertEquals(CircuitBreaker.State.OPEN, circuitBreaker.getState());
 
-        int performedRequests = requests.get();
+        int performedRequests = wireMockServer.getAllServeEvents().size();
         assertNull(userServiceClient.getUserByEmail(EMAIL));
-        assertEquals(performedRequests, requests.get());
+        assertEquals(performedRequests, wireMockServer.getAllServeEvents().size());
     }
 
     private UserResponse callWithMode(HandlerMode handlerMode) {
-        mode.set(handlerMode);
+        stubUserService(handlerMode);
         return userServiceClient.getUserByEmail(EMAIL);
     }
 
-    private static void handle(HttpExchange exchange) throws IOException {
-        requests.incrementAndGet();
-        HandlerMode current = mode.get();
-        exchange.getResponseHeaders().set("Content-Type", "application/json");
-        int status;
-        byte[] body;
-        switch (current) {
-            case ALWAYS_404 -> {
-                status = 404;
-                body = "{\"message\":\"not found\"}".getBytes(StandardCharsets.UTF_8);
-            }
-            case SUCCESS_AFTER_FAILURES -> {
-                if (requests.get() < 3) {
-                    status = 503;
-                    body = "{}".getBytes(StandardCharsets.UTF_8);
-                } else {
-                    status = 200;
-                    body = USER_JSON.getBytes(StandardCharsets.UTF_8);
-                }
-            }
-            case ALWAYS_200 -> {
-                status = 200;
-                body = USER_JSON.getBytes(StandardCharsets.UTF_8);
-            }
-            default -> {
-                status = 503;
-                body = "{}".getBytes(StandardCharsets.UTF_8);
-            }
+    private static void stubUserService(HandlerMode mode) {
+        wireMockServer.resetAll();
+        switch (mode) {
+            case ALWAYS_404 -> stubNotFound();
+            case SUCCESS_AFTER_FAILURES -> stubSuccessAfterFailures();
+            case ALWAYS_200 -> stubOk();
+            default -> stubServerError();
         }
-        exchange.sendResponseHeaders(status, body.length);
-        exchange.getResponseBody().write(body);
-        exchange.close();
+    }
+
+    private static void stubOk() {
+        wireMockServer.stubFor(get(urlPathMatching(userUrlPattern()))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(USER_JSON)));
+    }
+
+    private static void stubNotFound() {
+        wireMockServer.stubFor(get(urlPathMatching(userUrlPattern()))
+                .willReturn(aResponse()
+                        .withStatus(404)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{\"message\":\"not found\"}")));
+    }
+
+    private static void stubServerError() {
+        wireMockServer.stubFor(get(urlPathMatching(userUrlPattern()))
+                .willReturn(aResponse()
+                        .withStatus(503)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{}")));
+    }
+
+    private static void stubSuccessAfterFailures() {
+        wireMockServer.stubFor(get(urlPathMatching(userUrlPattern()))
+                .inScenario("user-service-success-after-failures")
+                .whenScenarioStateIs("Started")
+                .willReturn(aResponse()
+                        .withStatus(503)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{}"))
+                .willSetStateTo("second-attempt"));
+
+        wireMockServer.stubFor(get(urlPathMatching(userUrlPattern()))
+                .inScenario("user-service-success-after-failures")
+                .whenScenarioStateIs("second-attempt")
+                .willReturn(aResponse()
+                        .withStatus(503)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{}"))
+                .willSetStateTo("third-attempt"));
+
+        wireMockServer.stubFor(get(urlPathMatching(userUrlPattern()))
+                .inScenario("user-service-success-after-failures")
+                .whenScenarioStateIs("third-attempt")
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(USER_JSON)));
+    }
+
+    private static String userUrlPattern() {
+        return "/users/by-email/.*";
     }
 }
