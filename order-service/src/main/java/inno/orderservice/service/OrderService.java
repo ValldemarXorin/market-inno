@@ -1,5 +1,6 @@
 package inno.orderservice.service;
 
+import inno.orderservice.client.UserServiceClient;
 import inno.orderservice.dao.repository.ItemRepository;
 import inno.orderservice.dao.repository.OrderRepository;
 import inno.orderservice.dao.specification.OrderSpecification;
@@ -7,12 +8,14 @@ import inno.orderservice.dto.request.CreateOrderRequest;
 import inno.orderservice.dto.request.OrderItemRequest;
 import inno.orderservice.dto.request.UpdateOrderRequest;
 import inno.orderservice.dto.response.OrderResponse;
+import inno.orderservice.dto.response.UserResponse;
 import inno.orderservice.entity.Item;
 import inno.orderservice.entity.Order;
 import inno.orderservice.entity.OrderItem;
 import inno.orderservice.entity.OrderStatus;
 import inno.orderservice.exception.custom_exception.ItemNotFoundException;
 import inno.orderservice.exception.custom_exception.OrderNotFoundException;
+import inno.orderservice.exception.custom_exception.UserNotFoundException;
 import inno.orderservice.mapper.OrderMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -32,10 +35,19 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final ItemRepository itemRepository;
     private final OrderMapper orderMapper;
+    private final UserServiceClient userServiceClient;
 
     @Transactional
     public OrderResponse createOrder(CreateOrderRequest request) {
+        UserResponse user = userServiceClient.getUserByEmail(request.email());
+        if (user == null) {
+            throw new UserNotFoundException(request.email());
+        }
+
         Order order = orderMapper.toEntity(request);
+        order.setUserId(user.id());
+        order.setUserEmail(request.email());
+
         List<OrderItem> items = resolveItems(request.items(), order);
         order.getOrderItems().addAll(items);
         order.setTotalPrice(calculateTotal(items));

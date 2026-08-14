@@ -91,3 +91,4 @@ jacocoTestReport {
 tasks.withType(JavaCompile).configureEach {
 	options.compilerArgs.add("-Amapstruct.defaultComponentModel=spring") // Опционально для удобства MapStruct
 }
+

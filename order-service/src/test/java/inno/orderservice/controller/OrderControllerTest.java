@@ -25,9 +25,11 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -50,6 +52,7 @@ class OrderControllerTest {
 
     private UUID testOrderId;
     private UUID testUserId;
+    private String testEmail;
     private OrderResponse orderWithoutUser;
     private OrderResponse orderWithUser;
     private UserResponse user;
@@ -58,26 +61,27 @@ class OrderControllerTest {
     void initData() {
         testOrderId = UUID.randomUUID();
         testUserId = UUID.randomUUID();
+        testEmail = "vova@gmail.com";
 
         orderWithoutUser = new OrderResponse(
-                testOrderId, testUserId, OrderStatus.CREATED,
+                testOrderId, testUserId, testEmail, OrderStatus.CREATED,
                 new BigDecimal("30.00"), false, List.of(), null);
 
         user = new UserResponse(
                 testUserId, "vova", "khorin", LocalDate.of(2006, 1, 20),
-                "vova@gmail.com", true, null, null);
+                testEmail, true, null, null);
 
         orderWithUser = new OrderResponse(
-                testOrderId, testUserId, OrderStatus.CREATED,
+                testOrderId, testUserId, testEmail, OrderStatus.CREATED,
                 new BigDecimal("30.00"), false, List.of(), user);
     }
 
     @Test
-    void shouldCreateOrderAndEnrichWithUser() {
-        CreateOrderRequest request = new CreateOrderRequest(testUserId, List.of());
+    void shouldCreateOrderAndEnrichWithUserByEmail() {
+        CreateOrderRequest request = new CreateOrderRequest(testEmail, List.of());
 
         when(orderService.createOrder(request)).thenReturn(orderWithoutUser);
-        when(userServiceClient.getUserByUserId(testUserId)).thenReturn(user);
+        when(userServiceClient.getUserByEmail(testEmail)).thenReturn(user);
         when(orderMapper.toResponse(orderWithoutUser, user)).thenReturn(orderWithUser);
 
         ResponseEntity<OrderResponse> response = orderController.createOrder(request);
@@ -86,13 +90,13 @@ class OrderControllerTest {
         assertEquals("/api/v1/orders/" + testOrderId, response.getHeaders().getLocation().toString());
         assertSame(orderWithUser, response.getBody());
         assertNotNull(response.getBody().user());
-        verify(userServiceClient).getUserByUserId(testUserId);
+        verify(userServiceClient).getUserByEmail(testEmail);
     }
 
     @Test
-    void shouldGetOrderByIdWithUser() {
+    void shouldGetOrderByIdWithUserByEmail() {
         when(orderService.getOrderById(testOrderId)).thenReturn(orderWithoutUser);
-        when(userServiceClient.getUserByUserId(testUserId)).thenReturn(user);
+        when(userServiceClient.getUserByEmail(testEmail)).thenReturn(user);
         when(orderMapper.toResponse(orderWithoutUser, user)).thenReturn(orderWithUser);
 
         ResponseEntity<OrderResponse> response = orderController.getOrderById(testOrderId);
@@ -100,6 +104,7 @@ class OrderControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertSame(orderWithUser, response.getBody());
         assertNotNull(response.getBody().user());
+        verify(userServiceClient).getUserByEmail(testEmail);
     }
 
     @Test
@@ -107,7 +112,7 @@ class OrderControllerTest {
         Page<OrderResponse> page = new PageImpl<>(List.of(orderWithoutUser));
 
         when(orderService.getOrders(any(), any(), any(), any(Pageable.class))).thenReturn(page);
-        when(userServiceClient.getUserByUserId(testUserId)).thenReturn(user);
+        when(userServiceClient.getUserByEmail(testEmail)).thenReturn(user);
         when(orderMapper.toResponse(orderWithoutUser, user)).thenReturn(orderWithUser);
 
         ResponseEntity<Page<OrderResponse>> response =
@@ -123,7 +128,7 @@ class OrderControllerTest {
         Page<OrderResponse> page = new PageImpl<>(List.of(orderWithoutUser));
 
         when(orderService.getOrdersByUserId(testUserId, Pageable.unpaged())).thenReturn(page);
-        when(userServiceClient.getUserByUserId(testUserId)).thenReturn(user);
+        when(userServiceClient.getUserByEmail(testEmail)).thenReturn(user);
         when(orderMapper.toResponse(orderWithoutUser, user)).thenReturn(orderWithUser);
 
         ResponseEntity<Page<OrderResponse>> response =
@@ -138,7 +143,7 @@ class OrderControllerTest {
         UpdateOrderRequest request = new UpdateOrderRequest(OrderStatus.PROCESSING, List.of());
 
         when(orderService.updateOrder(testOrderId, request)).thenReturn(orderWithoutUser);
-        when(userServiceClient.getUserByUserId(testUserId)).thenReturn(user);
+        when(userServiceClient.getUserByEmail(testEmail)).thenReturn(user);
         when(orderMapper.toResponse(orderWithoutUser, user)).thenReturn(orderWithUser);
 
         ResponseEntity<OrderResponse> response = orderController.updateOrder(testOrderId, request);

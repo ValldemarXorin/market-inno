@@ -2,6 +2,7 @@ package inno.orderservice.client;
 
 import inno.orderservice.dto.response.UserResponse;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,10 +41,10 @@ class UserServiceClientTest {
     }
 
     @Test
-    void shouldFetchUserByUserId() {
-        UUID userId = UUID.randomUUID();
+    void shouldFetchUserByEmail() {
+        String email = "vova@gmail.com";
         UserResponse expected = new UserResponse(
-                userId, "vova", "khorin", null, "vova@gmail.com", true, null, null);
+                UUID.randomUUID(), "vova", "khorin", null, email, true, null, null);
 
         RestClient.RequestHeadersUriSpec<?> requestSpec = mock(RestClient.RequestHeadersUriSpec.class);
         RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
@@ -53,7 +54,7 @@ class UserServiceClientTest {
         when(requestSpec.retrieve()).thenReturn(responseSpec);
         when(responseSpec.body(UserResponse.class)).thenReturn(expected);
 
-        UserResponse actual = userServiceClient.getUserByUserId(userId);
+        UserResponse actual = userServiceClient.getUserByEmail(email);
 
         assertSame(expected, actual);
         verify(restClient).get();
@@ -63,17 +64,22 @@ class UserServiceClientTest {
         ArgumentCaptor<Function<UriBuilder, URI>> uriCaptor = ArgumentCaptor.forClass(Function.class);
         verify(requestSpec).uri(uriCaptor.capture());
         URI uri = uriCaptor.getValue().apply(UriComponentsBuilder.newInstance());
-        assertEquals("/users/" + userId, uri.getPath());
+        assertEquals("/users/by-email/" + email, uri.getPath());
     }
 
     @Test
-    void shouldBeProtectedByCircuitBreaker() throws Exception {
-        Method method = UserServiceClient.class.getMethod("getUserByUserId", UUID.class);
+    void shouldBeProtectedByRetryAndCircuitBreaker() throws Exception {
+        Method method = UserServiceClient.class.getMethod("getUserByEmail", String.class);
 
-        CircuitBreaker annotation = method.getAnnotation(CircuitBreaker.class);
+        Retry retry = method.getAnnotation(Retry.class);
+        CircuitBreaker circuitBreaker = method.getAnnotation(CircuitBreaker.class);
 
-        assertNotNull(annotation);
-        assertEquals("userService", annotation.name());
-        assertEquals("getUserByUserIdFallback", annotation.fallbackMethod());
+        assertNotNull(retry);
+        assertEquals("userService", retry.name());
+        assertEquals("getUserByEmailFallback", retry.fallbackMethod());
+
+        assertNotNull(circuitBreaker);
+        assertEquals("userService", circuitBreaker.name());
+        assertEquals("", circuitBreaker.fallbackMethod());
     }
 }

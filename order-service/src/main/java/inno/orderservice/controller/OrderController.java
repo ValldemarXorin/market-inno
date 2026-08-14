@@ -82,6 +82,6 @@ public class OrderController {
     }
 
     private OrderResponse enrich(OrderResponse order) {
-        return orderMapper.toResponse(order, userServiceClient.getUserByUserId(order.userId()));
+        return orderMapper.toResponse(order, userServiceClient.getUserByEmail(order.email()));
     }
 }

@@ -25,6 +25,9 @@ public class Order extends BaseEntity {
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
+    @Column(name = "user_email", nullable = false, length = 255)
+    private String userEmail;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private OrderStatus status = OrderStatus.CREATED;

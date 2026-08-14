@@ -1,17 +1,20 @@
 package inno.orderservice.service;
 
+import inno.orderservice.client.UserServiceClient;
 import inno.orderservice.dao.repository.ItemRepository;
 import inno.orderservice.dao.repository.OrderRepository;
 import inno.orderservice.dto.request.CreateOrderRequest;
 import inno.orderservice.dto.request.OrderItemRequest;
 import inno.orderservice.dto.request.UpdateOrderRequest;
 import inno.orderservice.dto.response.OrderResponse;
+import inno.orderservice.dto.response.UserResponse;
 import inno.orderservice.entity.Item;
 import inno.orderservice.entity.Order;
 import inno.orderservice.entity.OrderItem;
 import inno.orderservice.entity.OrderStatus;
 import inno.orderservice.exception.custom_exception.ItemNotFoundException;
 import inno.orderservice.exception.custom_exception.OrderNotFoundException;
+import inno.orderservice.exception.custom_exception.UserNotFoundException;
 import inno.orderservice.mapper.OrderMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,15 +51,20 @@ public class OrderServiceTest {
     @Mock
     private OrderMapper orderMapper;
 
+    @Mock
+    private UserServiceClient userServiceClient;
+
     @InjectMocks
     private OrderService orderService;
 
     private UUID testOrderId;
     private UUID testUserId;
     private UUID testItemId;
+    private String testEmail;
     private Item testItem;
     private Order testOrder;
     private OrderItem testOrderItem;
+    private UserResponse testUserResponse;
     private OrderResponse testOrderResponse;
 
     @BeforeEach
@@ -64,6 +72,7 @@ public class OrderServiceTest {
         testOrderId = UUID.randomUUID();
         testUserId = UUID.randomUUID();
         testItemId = UUID.randomUUID();
+        testEmail = "vova@gmail.com";
 
         testItem = new Item();
         testItem.setId(testItemId);
@@ -77,19 +86,24 @@ public class OrderServiceTest {
         testOrder = new Order();
         testOrder.setId(testOrderId);
         testOrder.setUserId(testUserId);
+        testOrder.setUserEmail(testEmail);
         testOrder.setStatus(OrderStatus.CREATED);
         testOrder.setTotalPrice(new BigDecimal("30.00"));
 
+        testUserResponse = new UserResponse(
+                testUserId, "vova", "khorin", null, testEmail, true, null, null);
+
         testOrderResponse = new OrderResponse(
-                testOrderId, testUserId, OrderStatus.CREATED,
+                testOrderId, testUserId, testEmail, OrderStatus.CREATED,
                 new BigDecimal("30.00"), false, List.of(), null);
     }
 
     @Test
     public void shouldCreateOrderSuccessfully() {
         CreateOrderRequest request = new CreateOrderRequest(
-                testUserId, List.of(new OrderItemRequest(testItemId, 3)));
+                testEmail, List.of(new OrderItemRequest(testItemId, 3)));
 
+        when(userServiceClient.getUserByEmail(testEmail)).thenReturn(testUserResponse);
         when(itemRepository.findById(testItemId)).thenReturn(Optional.of(testItem));
         when(orderMapper.toEntity(any(CreateOrderRequest.class))).thenReturn(testOrder);
         when(orderMapper.toEntity(any(OrderItemRequest.class))).thenReturn(testOrderItem);
@@ -105,6 +119,8 @@ public class OrderServiceTest {
         Order saved = orderCaptor.getValue();
 
         assertSame(testOrder, saved);
+        assertEquals(testUserId, saved.getUserId());
+        assertEquals(testEmail, saved.getUserEmail());
         assertEquals(OrderStatus.CREATED, saved.getStatus());
         assertEquals(new BigDecimal("30.00"), saved.getTotalPrice());
         assertEquals(1, saved.getOrderItems().size());
@@ -118,10 +134,22 @@ public class OrderServiceTest {
     }
 
     @Test
+    public void shouldThrowUserNotFoundExceptionWhenUserCannotBeResolved() {
+        CreateOrderRequest request = new CreateOrderRequest(
+                testEmail, List.of(new OrderItemRequest(testItemId, 1)));
+
+        when(userServiceClient.getUserByEmail(testEmail)).thenReturn(null);
+
+        assertThrows(UserNotFoundException.class, () -> orderService.createOrder(request));
+    }
+
+    @Test
     public void shouldThrowItemNotFoundExceptionWhenItemIsMissing() {
         CreateOrderRequest request = new CreateOrderRequest(
-                testUserId, List.of(new OrderItemRequest(testItemId, 1)));
+                testEmail, List.of(new OrderItemRequest(testItemId, 1)));
 
+        when(userServiceClient.getUserByEmail(testEmail)).thenReturn(testUserResponse);
+        when(orderMapper.toEntity(any(CreateOrderRequest.class))).thenReturn(testOrder);
         when(itemRepository.findById(testItemId)).thenReturn(Optional.empty());
 
         assertThrows(ItemNotFoundException.class, () -> orderService.createOrder(request));
