@@ -16,8 +16,10 @@ import inno.orderservice.entity.OrderStatus;
 import inno.orderservice.exception.custom_exception.ItemNotFoundException;
 import inno.orderservice.exception.custom_exception.OrderNotFoundException;
 import inno.orderservice.exception.custom_exception.UserNotFoundException;
+import inno.orderservice.event.PaymentCreatedEvent;
 import inno.orderservice.mapper.OrderMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -28,6 +30,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderService {
@@ -99,6 +102,28 @@ public class OrderService {
         if (updated == 0) {
             throw new OrderNotFoundException(id);
         }
+    }
+
+    @Transactional
+    public void processPayment(PaymentCreatedEvent event) {
+        OrderStatus targetStatus = switch (event.status()) {
+            case SUCCESSFUL -> OrderStatus.COMPLETED;
+            case UNSUCCESSFUL -> OrderStatus.CANCELLED;
+        };
+
+        Order order = orderRepository.findById(event.orderId())
+                .orElseThrow(() -> new OrderNotFoundException(event.orderId()));
+
+        if (order.getStatus() == targetStatus) {
+            log.warn("Payment event already processed, skipping: paymentId={}, orderId={}, currentStatus={}",
+                    event.paymentId(), event.orderId(), order.getStatus());
+            return;
+        }
+
+        order.setStatus(targetStatus);
+        orderRepository.save(order);
+        log.info("Order status updated by payment event: orderId={}, oldStatus={}, newStatus={}",
+                order.getId(), event.status(), order.getStatus());
     }
 
     private List<OrderItem> resolveItems(List<OrderItemRequest> requests, Order order) {
