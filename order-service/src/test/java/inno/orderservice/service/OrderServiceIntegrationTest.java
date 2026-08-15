@@ -13,6 +13,9 @@ import inno.orderservice.entity.Order;
 import inno.orderservice.entity.OrderStatus;
 import inno.orderservice.exception.custom_exception.OrderNotFoundException;
 import inno.orderservice.exception.custom_exception.UserNotFoundException;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -84,6 +87,12 @@ class OrderServiceIntegrationTest {
     @Autowired
     private ItemRepository itemRepository;
 
+    @Autowired
+    private CircuitBreakerRegistry circuitBreakerRegistry;
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
     private static final String EMAIL = "vova@gmail.com";
     private static final UUID USER_ID = UUID.fromString("c0a8d1e2-0000-0000-0000-000000000001");
 
@@ -92,6 +101,7 @@ class OrderServiceIntegrationTest {
     @BeforeEach
     void setUp() {
         wireMockServer.resetAll();
+        circuitBreakerRegistry.circuitBreaker("userService").reset();
 
         item = new Item();
         item.setName("test item");
@@ -179,6 +189,9 @@ class OrderServiceIntegrationTest {
         OrderResponse created = createOrder();
 
         orderService.deleteOrder(created.id());
+
+        entityManager.flush();
+        entityManager.clear();
 
         assertThrows(OrderNotFoundException.class, () -> orderService.getOrderById(created.id()));
         Order deleted = orderRepository.findById(created.id()).orElseThrow();

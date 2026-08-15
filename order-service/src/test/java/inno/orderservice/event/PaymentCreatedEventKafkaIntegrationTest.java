@@ -75,14 +75,12 @@ class PaymentCreatedEventKafkaIntegrationTest {
 
     @BeforeEach
     void createOrder() {
-        orderId = UUID.randomUUID();
         Order order = new Order();
-        order.setId(orderId);
         order.setUserId(UUID.randomUUID());
         order.setUserEmail("vova@gmail.com");
         order.setStatus(OrderStatus.CREATED);
         order.setTotalPrice(new BigDecimal("30.00"));
-        orderRepository.save(order);
+        orderId = orderRepository.save(order).getId();
     }
 
     @AfterEach
