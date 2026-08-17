@@ -2,6 +2,7 @@ package inno.orderservice.controller;
 
 import inno.orderservice.client.UserServiceClient;
 import inno.orderservice.dto.request.CreateOrderRequest;
+import inno.orderservice.dto.request.OrderFilterRequest;
 import inno.orderservice.dto.request.UpdateOrderRequest;
 import inno.orderservice.dto.response.OrderResponse;
 import inno.orderservice.entity.OrderStatus;
@@ -14,14 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 import java.time.LocalDateTime;
@@ -53,14 +47,13 @@ public class OrderController {
     @GetMapping("/orders")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<OrderResponse>> getOrders(
-            @RequestParam(required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
-            @RequestParam(required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
-            @RequestParam(required = false) List<OrderStatus> statuses,
+            @ModelAttribute OrderFilterRequest filter,
             Pageable pageable) {
-        return ResponseEntity.ok(orderService.getOrders(from, to, statuses, pageable)
-                .map(this::enrich));
+
+        return ResponseEntity.ok(
+                orderService.getOrders(filter, pageable)
+                        .map(this::enrich)
+        );
     }
 
     @GetMapping("/users/{userId}/orders")

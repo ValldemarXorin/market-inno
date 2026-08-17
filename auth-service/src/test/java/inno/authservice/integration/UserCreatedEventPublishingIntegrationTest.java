@@ -100,9 +100,9 @@ class UserCreatedEventPublishingIntegrationTest {
             long deadline = System.currentTimeMillis() + 10_000;
             while (System.currentTimeMillis() < deadline && events.size() < expectedCount) {
                 ConsumerRecords<String, UserCreatedEvent> consumerRecords = consumer.poll(Duration.ofMillis(300));
-                for (ConsumerRecord<String, UserCreatedEvent> record : consumerRecords) {
-                    if (userId.equals(record.value().userId())) {
-                        events.add(record.value());
+                for (ConsumerRecord<String, UserCreatedEvent> consumerRecord : consumerRecords) {
+                    if (userId.equals(consumerRecord.value().userId())) {
+                        events.add(consumerRecord.value());
                     }
                 }
             }

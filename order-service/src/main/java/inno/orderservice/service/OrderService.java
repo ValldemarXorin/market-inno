@@ -5,6 +5,7 @@ import inno.orderservice.dao.repository.ItemRepository;
 import inno.orderservice.dao.repository.OrderRepository;
 import inno.orderservice.dao.specification.OrderSpecification;
 import inno.orderservice.dto.request.CreateOrderRequest;
+import inno.orderservice.dto.request.OrderFilterRequest;
 import inno.orderservice.dto.request.OrderItemRequest;
 import inno.orderservice.dto.request.UpdateOrderRequest;
 import inno.orderservice.dto.response.OrderResponse;
@@ -63,12 +64,17 @@ public class OrderService {
         return orderMapper.toResponse(order);
     }
 
-    public Page<OrderResponse> getOrders(LocalDateTime from, LocalDateTime to,
-                                         List<OrderStatus> statuses, Pageable pageable) {
+    public Page<OrderResponse> getOrders(
+            OrderFilterRequest filter,
+            Pageable pageable) {
+
         return orderRepository.findAll(
                         OrderSpecification.notDeleted()
-                                .and(OrderSpecification.createdBetween(from, to))
-                                .and(OrderSpecification.hasStatuses(statuses)),
+                                .and(OrderSpecification.createdBetween(
+                                        filter.from(),
+                                        filter.to()))
+                                .and(OrderSpecification.hasStatuses(
+                                        filter.statuses())),
                         pageable)
                 .map(orderMapper::toResponse);
     }
