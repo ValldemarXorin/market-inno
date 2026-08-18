@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import inno.authservice.dto.request.LoginRequest;
 import inno.authservice.dto.request.RefreshRequest;
 import inno.authservice.dto.request.RegisterRequest;
+import inno.authservice.dto.response.RegisterResponse;
 import inno.authservice.dto.response.TokenPairResponse;
+import inno.authservice.security.CurrentUser;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -26,7 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 @Transactional
 class AuthControllerIntegrationTest {
 
@@ -216,6 +218,43 @@ class AuthControllerIntegrationTest {
         mockMvc.perform(post("/auth/validate")
                         .header("Authorization",
                                 "Bearer not-a-real-token"))
+                .andDo(print())
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldReturnCurrentUser_whenIdentityHeaderPresent()
+            throws Exception {
+
+        RegisterRequest register =
+                registerRequest("me_user", "password123");
+
+        String registerResponse =
+                mockMvc.perform(post("/auth/register")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(register)))
+                        .andDo(print())
+                        .andExpect(status().isCreated())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+
+        RegisterResponse created =
+                objectMapper.readValue(registerResponse, RegisterResponse.class);
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/auth/me")
+                        .header(CurrentUser.USER_ID_HEADER, created.id().toString())
+                        .header(CurrentUser.USER_ROLE_HEADER, "USER"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.login").value("me_user"));
+    }
+
+    @Test
+    void shouldReturnUnauthorized_whenIdentityHeaderMissing()
+            throws Exception {
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/auth/me"))
                 .andDo(print())
                 .andExpect(status().isUnauthorized());
     }

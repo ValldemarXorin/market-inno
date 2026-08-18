@@ -3,6 +3,9 @@ package inno.authservice.exception;
 import inno.authservice.dto.response.ErrorResponse;
 import inno.authservice.dto.response.ValidationErrorResponse;
 import inno.authservice.exception.custom_exception.*;
+import inno.authservice.security.exception.ForbiddenException;
+import inno.authservice.security.exception.InvalidIdentityException;
+import inno.authservice.security.exception.MissingIdentityException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,6 +60,24 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(LoginAlreadyExistsException.class)
     public ResponseEntity<ErrorResponse> handleLoginAlreadyExists(LoginAlreadyExistsException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(MissingIdentityException.class)
+    public ResponseEntity<ErrorResponse> handleMissingIdentity(
+            MissingIdentityException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(InvalidIdentityException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidIdentity(
+            InvalidIdentityException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ErrorResponse> handleForbidden(
+            ForbiddenException ex, HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, ex.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
