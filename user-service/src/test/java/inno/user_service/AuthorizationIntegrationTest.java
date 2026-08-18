@@ -5,10 +5,12 @@ import com.redis.testcontainers.RedisContainer;
 import inno.user_service.dto.request.CreateUserRequest;
 import inno.user_service.dto.request.SetActiveRequest;
 import inno.user_service.dto.response.UserResponse;
+import inno.user_service.security.CurrentUser;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -31,8 +33,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
 @EmbeddedKafka(partitions = 1, topics = {"user-created-events", "user-status-events"})
 @AutoConfigureMockMvc
-@Testcontainers
-class SecurityIntegrationTest {
+@Testcontainers(disabledWithoutDocker = true)
+class AuthorizationIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -59,8 +61,6 @@ class SecurityIntegrationTest {
         registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
 
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
-
-        registry.add("auth.jwt.secret", () -> TestTokens.SECRET);
     }
 
     @Test
@@ -73,20 +73,28 @@ class SecurityIntegrationTest {
     }
 
     @Test
+    void malformedUserIdShouldBeRejected() throws Exception {
+        mockMvc.perform(get("/users/00000000-0000-0000-0000-000000000000")
+                        .header(CurrentUser.USER_ID_HEADER, "not-a-uuid")
+                        .header(CurrentUser.USER_ROLE_HEADER, "USER"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void adminShouldAccessProtectedEndpoints() throws Exception {
-        String token = TestTokens.adminToken();
+        HttpHeaders admin = TestIdentity.adminHeaders();
         UserResponse user = createUser();
 
         mockMvc.perform(get("/users")
-                        .header("Authorization", "Bearer " + token))
+                        .headers(admin))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/users/" + user.id())
-                        .header("Authorization", "Bearer " + token))
+                        .headers(admin))
                 .andExpect(status().isOk());
 
         mockMvc.perform(patch("/users/" + user.id() + "/active")
-                        .header("Authorization", "Bearer " + token)
+                        .headers(admin)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new SetActiveRequest(false))))
                 .andExpect(status().isNoContent());
@@ -95,24 +103,23 @@ class SecurityIntegrationTest {
     @Test
     void userShouldAccessOwnResources() throws Exception {
         UserResponse user = createUser();
-        String token = TestTokens.userToken(user.id());
 
         mockMvc.perform(get("/users/" + user.id())
-                        .header("Authorization", "Bearer " + token))
+                        .headers(TestIdentity.userHeaders(user.id())))
                 .andExpect(status().isOk());
     }
 
     @Test
     void userShouldBeDeniedAccessToAdminEndpoints() throws Exception {
         UserResponse user = createUser();
-        String token = TestTokens.userToken(user.id());
+        HttpHeaders headers = TestIdentity.userHeaders(user.id());
 
         mockMvc.perform(get("/users")
-                        .header("Authorization", "Bearer " + token))
+                        .headers(headers))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(patch("/users/" + user.id() + "/active")
-                        .header("Authorization", "Bearer " + token)
+                        .headers(headers)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new SetActiveRequest(false))))
                 .andExpect(status().isForbidden());
@@ -122,10 +129,9 @@ class SecurityIntegrationTest {
     void userShouldBeDeniedAccessToAnotherUsersResources() throws Exception {
         UserResponse user = createUser();
         UserResponse other = createUser();
-        String token = TestTokens.userToken(user.id());
 
         mockMvc.perform(get("/users/" + other.id())
-                        .header("Authorization", "Bearer " + token))
+                        .headers(TestIdentity.userHeaders(user.id())))
                 .andExpect(status().isForbidden());
     }
 

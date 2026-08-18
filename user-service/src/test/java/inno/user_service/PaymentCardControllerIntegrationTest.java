@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -31,7 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
 @EmbeddedKafka(partitions = 1, topics = {"user-created-events", "user-status-events"})
 @AutoConfigureMockMvc
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 class PaymentCardControllerIntegrationTest {
 
     @Autowired
@@ -60,8 +61,6 @@ class PaymentCardControllerIntegrationTest {
         registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
 
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
-
-        registry.add("auth.jwt.secret", () -> TestTokens.SECRET);
     }
 
     @Test
@@ -86,7 +85,7 @@ class PaymentCardControllerIntegrationTest {
         UserResponse user =
                 objectMapper.readValue(createdUserJson, UserResponse.class);
 
-        String adminToken = TestTokens.adminToken();
+        HttpHeaders admin = TestIdentity.adminHeaders();
 
         CreatePaymentCardRequest cardRequest =
                 new CreatePaymentCardRequest(
@@ -97,7 +96,7 @@ class PaymentCardControllerIntegrationTest {
 
         String createdCardJson =
                 mockMvc.perform(post("/users/" + user.id() + "/cards")
-                                .header("Authorization", "Bearer " + adminToken)
+                                .headers(admin)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(cardRequest)))
                         .andExpect(status().isCreated())
@@ -110,18 +109,18 @@ class PaymentCardControllerIntegrationTest {
                 objectMapper.readValue(createdCardJson, PaymentCardResponse.class);
 
         mockMvc.perform(get("/cards/" + card.id())
-                        .header("Authorization", "Bearer " + adminToken))
+                        .headers(admin))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(card.id().toString()))
                 .andExpect(jsonPath("$.holder").value("Masha Mashina"));
 
         mockMvc.perform(get("/users/" + user.id() + "/cards")
-                        .header("Authorization", "Bearer " + adminToken))
+                        .headers(admin))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(1));
 
         mockMvc.perform(get("/cards")
-                        .header("Authorization", "Bearer " + adminToken))
+                        .headers(admin))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(1));
 
@@ -133,7 +132,7 @@ class PaymentCardControllerIntegrationTest {
                 );
 
         mockMvc.perform(put("/cards/" + card.id())
-                        .header("Authorization", "Bearer " + adminToken)
+                        .headers(admin)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
@@ -141,18 +140,18 @@ class PaymentCardControllerIntegrationTest {
                 .andExpect(jsonPath("$.number").value("5555666677778888"));
 
         mockMvc.perform(patch("/cards/" + card.id() + "/active")
-                        .header("Authorization", "Bearer " + adminToken)
+                        .headers(admin)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 new SetActiveRequest(false))))
                 .andExpect(status().isNoContent());
 
         mockMvc.perform(delete("/cards/" + card.id())
-                        .header("Authorization", "Bearer " + adminToken))
+                        .headers(admin))
                 .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/cards/" + card.id())
-                        .header("Authorization", "Bearer " + adminToken))
+                        .headers(admin))
                 .andExpect(status().isNotFound());
     }
 }

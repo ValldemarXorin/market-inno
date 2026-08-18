@@ -2,10 +2,12 @@ package inno.user_service.exception;
 
 import inno.user_service.dto.response.ErrorResponse;
 import inno.user_service.exception.custom_exception.*;
+import inno.user_service.security.exception.ForbiddenException;
+import inno.user_service.security.exception.InvalidIdentityException;
+import inno.user_service.security.exception.MissingIdentityException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -47,9 +49,22 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
 
-    @ExceptionHandler(AccessDeniedException.class)
-    public void handleAccessDenied(AccessDeniedException ex) throws AccessDeniedException {
-        throw ex;
+    @ExceptionHandler(MissingIdentityException.class)
+    public ResponseEntity<ErrorResponse> handleMissingIdentity(
+            MissingIdentityException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(InvalidIdentityException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidIdentity(
+            InvalidIdentityException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ErrorResponse> handleForbidden(
+            ForbiddenException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
