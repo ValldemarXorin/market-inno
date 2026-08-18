@@ -21,10 +21,9 @@ public class JwtAuthenticationConverter implements Converter<Jwt, Mono<AbstractA
     @Override
     public Mono<AbstractAuthenticationToken> convert(Jwt jwt) {
         String role = jwt.getClaimAsString(ROLE_CLAIM);
-        if (role == null || role.isBlank()) {
-            return Mono.error(new BadJwtException("Missing role claim"));
-        }
-        List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(ROLE_PREFIX + role));
+        List<GrantedAuthority> authorities = role == null || role.isBlank()
+                ? List.of()
+                : List.of(new SimpleGrantedAuthority(ROLE_PREFIX + role));
         return Mono.just(new JwtAuthenticationToken(jwt, authorities));
     }
 }

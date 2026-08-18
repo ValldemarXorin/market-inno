@@ -23,6 +23,15 @@ public final class TestTokens {
                 .compact();
     }
 
+    public static String tokenWithoutRole(UUID userId) {
+        return Jwts.builder()
+                .subject(userId.toString())
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + 3600_000))
+                .signWith(Keys.hmacShaKeyFor(SECRET.getBytes()))
+                .compact();
+    }
+
     public static String expiredToken(UUID userId, String role) {
         return Jwts.builder()
                 .subject(userId.toString())
