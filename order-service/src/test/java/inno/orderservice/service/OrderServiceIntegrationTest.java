@@ -1,10 +1,10 @@
 package inno.orderservice.service;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
-import inno.orderservice.TestTokens;
 import inno.orderservice.dao.repository.ItemRepository;
 import inno.orderservice.dao.repository.OrderRepository;
 import inno.orderservice.dto.request.CreateOrderRequest;
+import inno.orderservice.dto.request.OrderFilterRequest;
 import inno.orderservice.dto.request.OrderItemRequest;
 import inno.orderservice.dto.request.UpdateOrderRequest;
 import inno.orderservice.dto.response.OrderResponse;
@@ -43,7 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
 @EmbeddedKafka(partitions = 1, topics = {"payment-created-events"})
 @Transactional
@@ -65,8 +65,6 @@ class OrderServiceIntegrationTest {
         registry.add("spring.datasource.password", postgres::getPassword);
 
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
-
-        registry.add("auth.jwt.secret", () -> TestTokens.SECRET);
 
         registry.add("app.user-service.base-url", () -> "http://localhost:" + wireMockServer.port());
     }
@@ -153,7 +151,7 @@ class OrderServiceIntegrationTest {
         createOrder();
 
         Page<OrderResponse> allCreated = orderService.getOrders(
-                null, null, List.of(OrderStatus.CREATED), Pageable.unpaged());
+                new OrderFilterRequest(null, null, List.of(OrderStatus.CREATED)), Pageable.unpaged());
         assertEquals(2, allCreated.getTotalElements());
 
         Page<OrderResponse> byUser = orderService.getOrdersByUserId(USER_ID, Pageable.unpaged());
@@ -161,7 +159,7 @@ class OrderServiceIntegrationTest {
         assertTrue(byUser.getContent().stream().anyMatch(order -> order.id().equals(first.id())));
 
         Page<OrderResponse> byUnmatchedStatus = orderService.getOrders(
-                null, null, List.of(OrderStatus.COMPLETED), Pageable.unpaged());
+                new OrderFilterRequest(null, null, List.of(OrderStatus.COMPLETED)), Pageable.unpaged());
         assertEquals(0, byUnmatchedStatus.getTotalElements());
     }
 

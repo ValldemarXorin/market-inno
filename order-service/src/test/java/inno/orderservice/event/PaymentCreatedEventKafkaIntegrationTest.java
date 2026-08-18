@@ -1,6 +1,5 @@
 package inno.orderservice.event;
 
-import inno.orderservice.TestTokens;
 import inno.orderservice.dao.repository.OrderRepository;
 import inno.orderservice.entity.Order;
 import inno.orderservice.entity.OrderStatus;
@@ -37,7 +36,7 @@ import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
 @EmbeddedKafka(partitions = 1, topics = {"payment-created-events"})
 class PaymentCreatedEventKafkaIntegrationTest {
@@ -55,8 +54,6 @@ class PaymentCreatedEventKafkaIntegrationTest {
         registry.add("spring.datasource.password", postgres::getPassword);
 
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
-
-        registry.add("auth.jwt.secret", () -> TestTokens.SECRET);
     }
 
     @Autowired

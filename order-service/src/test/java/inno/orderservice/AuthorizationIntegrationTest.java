@@ -8,6 +8,7 @@ import inno.orderservice.dto.response.OrderResponse;
 import inno.orderservice.entity.Item;
 import inno.orderservice.entity.Order;
 import inno.orderservice.entity.OrderStatus;
+import inno.orderservice.security.CurrentUser;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,17 +29,18 @@ import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
 @EmbeddedKafka(partitions = 1, topics = {"payment-created-events"})
 @AutoConfigureMockMvc
-class SecurityIntegrationTest {
+class AuthorizationIntegrationTest {
 
     @Container
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17")
@@ -56,8 +58,6 @@ class SecurityIntegrationTest {
         registry.add("spring.datasource.password", postgres::getPassword);
 
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
-
-        registry.add("auth.jwt.secret", () -> TestTokens.SECRET);
 
         registry.add("app.user-service.base-url", () -> "http://localhost:" + wireMockServer.port());
     }
@@ -110,11 +110,13 @@ class SecurityIntegrationTest {
     }
 
     @Test
-    void invalidJwtShouldBeRejected() throws Exception {
-        mockMvc.perform(get("/orders").header("Authorization", "Bearer not-a-real-token"))
+    void invalidIdentityShouldBeRejected() throws Exception {
+        mockMvc.perform(get("/orders").header(CurrentUser.USER_ID_HEADER, "not-a-uuid")
+                        .header(CurrentUser.USER_ROLE_HEADER, "ADMIN"))
                 .andExpect(status().isUnauthorized());
 
-        mockMvc.perform(get("/orders").header("Authorization", "Basic dXNlcjpwYXNz"))
+        mockMvc.perform(get("/orders").header(CurrentUser.USER_ID_HEADER, UUID.randomUUID().toString())
+                        .header(CurrentUser.USER_ROLE_HEADER, "ROOT"))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -123,30 +125,29 @@ class SecurityIntegrationTest {
         UUID adminId = UUID.randomUUID();
         Order order = createOrder(adminId);
 
-        mockMvc.perform(get("/orders").header("Authorization", "Bearer " + TestTokens.token(adminId, "ADMIN")))
+        mockMvc.perform(get("/orders").headers(TestIdentity.adminHeaders()))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/orders/" + order.getId())
-                        .header("Authorization", "Bearer " + TestTokens.token(adminId, "ADMIN")))
+                        .headers(TestIdentity.adminHeaders()))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/users/" + adminId + "/orders")
-                        .header("Authorization", "Bearer " + TestTokens.token(adminId, "ADMIN")))
+                        .headers(TestIdentity.adminHeaders()))
                 .andExpect(status().isOk());
 
         mockMvc.perform(delete("/orders/" + order.getId())
-                        .header("Authorization", "Bearer " + TestTokens.token(adminId, "ADMIN")))
+                        .headers(TestIdentity.adminHeaders()))
                 .andExpect(status().isNoContent());
     }
 
     @Test
     void adminShouldCreateAndUpdateOrder() throws Exception {
         UUID adminId = UUID.randomUUID();
-        String token = TestTokens.token(adminId, "ADMIN");
         Item item = createItem();
 
         String created = mockMvc.perform(post("/orders")
-                        .header("Authorization", "Bearer " + token)
+                        .headers(TestIdentity.adminHeaders())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"email":"vova@gmail.com","items":[{"itemId":"%s","quantity":3}]}
@@ -157,7 +158,7 @@ class SecurityIntegrationTest {
         OrderResponse createdOrder = objectMapper.readValue(created, OrderResponse.class);
 
         mockMvc.perform(put("/orders/" + createdOrder.id())
-                        .header("Authorization", "Bearer " + token)
+                        .headers(TestIdentity.adminHeaders())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"status":"PROCESSING","items":[{"itemId":"%s","quantity":2}]}
@@ -171,7 +172,7 @@ class SecurityIntegrationTest {
         Order order = createOrder(userId);
 
         mockMvc.perform(get("/orders/" + order.getId())
-                        .header("Authorization", "Bearer " + TestTokens.userToken(userId)))
+                        .headers(TestIdentity.userHeaders(userId)))
                 .andExpect(status().isOk());
     }
 
@@ -182,20 +183,46 @@ class SecurityIntegrationTest {
         Order ownOrder = createOrder(userId);
         Order otherOrder = createOrder(otherUserId);
 
-        mockMvc.perform(get("/orders").header("Authorization", "Bearer " + TestTokens.userToken(userId)))
+        mockMvc.perform(get("/orders").headers(TestIdentity.userHeaders(userId)))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(get("/users/" + otherUserId + "/orders")
-                        .header("Authorization", "Bearer " + TestTokens.userToken(userId)))
+                        .headers(TestIdentity.userHeaders(userId)))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(get("/orders/" + otherOrder.getId())
-                        .header("Authorization", "Bearer " + TestTokens.userToken(userId)))
+                        .headers(TestIdentity.userHeaders(userId)))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(delete("/orders/" + ownOrder.getId())
-                        .header("Authorization", "Bearer " + TestTokens.userToken(userId)))
+                        .headers(TestIdentity.userHeaders(userId)))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void identityHeadersShouldBeForwardedToUserService() throws Exception {
+        UUID adminId = UUID.randomUUID();
+        Order order = createOrder(adminId);
+
+        wireMockServer.resetAll();
+        wireMockServer.stubFor(com.github.tomakehurst.wiremock.client.WireMock.get(urlPathMatching("/users/by-email/.*"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""
+                                {"id":"c0a8d1e2-0000-0000-0000-000000000001","username":"vova","surname":"khorin",
+                                 "birthDate":"2006-01-20","email":"vova@gmail.com","active":true,
+                                 "createdAt":"2026-01-01T12:00:00","updatedAt":"2026-01-01T12:00:00"}
+                                """)));
+
+        mockMvc.perform(get("/orders/" + order.getId())
+                        .headers(TestIdentity.identityHeaders(adminId, "ADMIN")))
+                .andExpect(status().isOk());
+
+        assertEquals(1, wireMockServer.getAllServeEvents().size());
+        var forwarded = wireMockServer.getAllServeEvents().get(0).getRequest().getHeaders();
+        assertEquals(adminId.toString(), forwarded.getHeader(CurrentUser.USER_ID_HEADER).firstValue());
+        assertEquals("ADMIN", forwarded.getHeader(CurrentUser.USER_ROLE_HEADER).firstValue());
     }
 
     private Order createOrder(UUID userId) {

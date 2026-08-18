@@ -4,6 +4,7 @@ import inno.orderservice.client.UserServiceClient;
 import inno.orderservice.dao.repository.ItemRepository;
 import inno.orderservice.dao.repository.OrderRepository;
 import inno.orderservice.dto.request.CreateOrderRequest;
+import inno.orderservice.dto.request.OrderFilterRequest;
 import inno.orderservice.dto.request.OrderItemRequest;
 import inno.orderservice.dto.request.UpdateOrderRequest;
 import inno.orderservice.dto.response.OrderResponse;
@@ -182,7 +183,7 @@ public class OrderServiceTest {
         when(orderMapper.toResponse(testOrder)).thenReturn(testOrderResponse);
 
         Page<OrderResponse> result = orderService.getOrders(
-                from, to, List.of(OrderStatus.CREATED), Pageable.unpaged());
+                new OrderFilterRequest(from, to, List.of(OrderStatus.CREATED)), Pageable.unpaged());
 
         assertEquals(1, result.getTotalElements());
         assertEquals(testOrderResponse, result.getContent().get(0));
