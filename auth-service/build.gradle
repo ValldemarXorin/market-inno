@@ -9,6 +9,10 @@ group = 'inno'
 version = '0.0.1-SNAPSHOT'
 description = 'auth-service'
 
+ext {
+    springCloudVersion = "2024.0.3"
+}
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(23)
@@ -48,6 +52,9 @@ dependencies {
 
     implementation 'org.springframework.kafka:spring-kafka'
 
+    // Service discovery registration (used by the api-gateway lb:// routes)
+    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -55,6 +62,12 @@ dependencies {
     testImplementation 'org.testcontainers:junit-jupiter:1.20.1'
     testImplementation 'org.testcontainers:postgresql:1.20.1'
     testImplementation 'org.springframework.kafka:spring-kafka-test'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+    }
 }
 
 tasks.named('test') {

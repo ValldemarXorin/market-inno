@@ -1,5 +1,21 @@
 services:
-  # Single Kafka broker shared by all services in the monorepo
+  # Infrastructure
+
+  # Service registry used by the api-gateway lb:// routes
+  eureka-server:
+    build:
+      context: ./eureka-server
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+  # Single Kafka broker (KRaft mode) shared by all services
   kafka:
     image: apache/kafka:3.7.0
     ports:
@@ -17,8 +33,9 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    restart: unless-stopped
 
-  # --- Auth Service infrastructure ---
+  # PostgreSQL for auth-service
   postgres:
     image: postgres:17
     environment:
@@ -34,12 +51,44 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+
+  # PostgreSQL shared by user-service (userservice) and order-service (orderservice)
+  postgres-db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ${DB_NAME:-userservice}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    ports:
+      - "5434:5432"
+    volumes:
+      - pg_user_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-userservice}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis cache for user-service
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Application services (internal network only)
 
   auth-service:
     build:
       context: ./auth-service
-    ports:
-      - "8081:8081"
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
@@ -51,61 +100,110 @@ services:
       JWT_REFRESH_TOKEN_TTL_DAYS: ${JWT_REFRESH_TOKEN_TTL_DAYS:-30}
       REFRESH_TOKEN_BYTE_LENGTH: ${REFRESH_TOKEN_BYTE_LENGTH:-64}
       BCRYPT_STRENGTH: ${BCRYPT_STRENGTH:-10}
-      API_VERSION: ${API_VERSION:-/api/v1}
+      API_VERSION: /api/v1
       SERVER_PORT: 8081
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      EUREKA_SERVICE_URL: http://eureka-server:8761/eureka
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
         condition: service_started
-
-  # --- User Service infrastructure ---
-  postgres-db:
-    image: postgres:17
-    environment:
-      POSTGRES_DB: ${DB_NAME:-userservice}
-      POSTGRES_USER: ${DB_USERNAME:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
-    ports:
-      - "5434:5432"
-    volumes:
-      - pg_user_data:/var/lib/postgresql/data
+      eureka-server:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-userservice}"]
-      interval: 5s
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/api/v1/ >/dev/null 2>&1 || exit 1"]
+      interval: 10s
       timeout: 5s
-      retries: 5
-
-  redis-cache:
-    image: redis:7
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      retries: 20
+      start_period: 60s
+    restart: unless-stopped
 
   user-service:
     build:
       context: ./user-service
-    ports:
-      - "8080:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - DB_NAME=${DB_NAME:-userservice}
-      - DB_USERNAME=${DB_USERNAME:-postgres}
-      - DB_PASSWORD=${DB_PASSWORD:-postgres}
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      SPRING_PROFILES_ACTIVE: docker
+      DB_NAME: ${DB_NAME:-userservice}
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      EUREKA_SERVICE_URL: http://eureka-server:8761/eureka
     depends_on:
       postgres-db:
         condition: service_healthy
-      redis-cache:
+      redis:
         condition: service_healthy
       kafka:
         condition: service_started
+      eureka-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/v1/ >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+    restart: unless-stopped
+
+  order-service:
+    build:
+      context: ./order-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_NAME: ${ORDER_DB_NAME:-orderservice}
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      USER_SERVICE_BASE_URL: http://user-service:8080/api/v1
+      JWT_SECRET: ${JWT_SECRET:-replace_with_a_random_secret_at_least_32_bytes_long}
+      EUREKA_SERVICE_URL: http://eureka-server:8761/eureka
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      eureka-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/v1/ >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+    restart: unless-stopped
+
+  # External entry point - the only application service exposed to the host
+  api-gateway:
+    build:
+      context: ./api-gateway
+    ports:
+      - "8082:8082"
+    environment:
+      SERVER_PORT: 8082
+      EUREKA_SERVICE_URL: http://eureka-server:8761/eureka
+      JWT_SECRET: ${JWT_SECRET:-replace_with_a_random_secret_at_least_32_bytes_long}
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/ >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+    restart: unless-stopped
 
 volumes:
   auth_postgres_data:
   pg_user_data:
+
+networks:
+  default:
+    name: market-inno-network
