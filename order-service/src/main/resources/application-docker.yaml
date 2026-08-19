@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres-db:5432/${DB_NAME:orderservice}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: ${DB_SCHEMA:public}
+
+  kafka:
+    bootstrap-servers: kafka:9092
+
+app:
+  user-service:
+    base-url: ${USER_SERVICE_BASE_URL:http://user-service:8080/api/v1}

@@ -264,4 +264,22 @@ public class UserServiceTest {
         verify(userRepository, times(1)).findById(testId);
         assertNotNull(firstCall);
     }
+
+    @Test
+    public void shouldGetUserByEmail() {
+        doReturn(Optional.of(testUser)).when(userRepository).findByEmail(testEmailVova);
+        doReturn(testUserResponse).when(userMapper).toResponse(testUser);
+
+        UserResponse result = userService.getUserByEmail(testEmailVova);
+
+        assertNotNull(result);
+        verify(userRepository).findByEmail(testEmailVova);
+    }
+
+    @Test
+    public void shouldThrowUserNotFoundWhenEmailDoesNotExist() {
+        doReturn(Optional.empty()).when(userRepository).findByEmail(testEmailVova);
+
+        assertThrows(UserNotFoundException.class, () -> userService.getUserByEmail(testEmailVova));
+    }
 }
