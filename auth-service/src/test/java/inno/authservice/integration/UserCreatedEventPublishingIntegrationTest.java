@@ -147,6 +147,10 @@ class UserCreatedEventPublishingIntegrationTest {
                         events.add(consumerRecord.value());
                     }
                 }
+                if (events.size() < expectedCount) {
+                    fail("expected " + expectedCount + " events, got " + events.size());
+                }
+                return events;
             }
         }
 
