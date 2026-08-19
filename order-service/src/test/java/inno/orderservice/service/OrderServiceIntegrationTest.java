@@ -5,6 +5,7 @@ import inno.orderservice.TestTokens;
 import inno.orderservice.dao.repository.ItemRepository;
 import inno.orderservice.dao.repository.OrderRepository;
 import inno.orderservice.dto.request.CreateOrderRequest;
+import inno.orderservice.dto.request.OrderFilterRequest;
 import inno.orderservice.dto.request.OrderItemRequest;
 import inno.orderservice.dto.request.UpdateOrderRequest;
 import inno.orderservice.dto.response.OrderResponse;
@@ -153,7 +154,7 @@ class OrderServiceIntegrationTest {
         createOrder();
 
         Page<OrderResponse> allCreated = orderService.getOrders(
-                null, null, List.of(OrderStatus.CREATED), Pageable.unpaged());
+                new OrderFilterRequest(null, null, List.of(OrderStatus.CREATED)), Pageable.unpaged());
         assertEquals(2, allCreated.getTotalElements());
 
         Page<OrderResponse> byUser = orderService.getOrdersByUserId(USER_ID, Pageable.unpaged());
@@ -161,7 +162,7 @@ class OrderServiceIntegrationTest {
         assertTrue(byUser.getContent().stream().anyMatch(order -> order.id().equals(first.id())));
 
         Page<OrderResponse> byUnmatchedStatus = orderService.getOrders(
-                null, null, List.of(OrderStatus.COMPLETED), Pageable.unpaged());
+                new OrderFilterRequest(null, null, List.of(OrderStatus.COMPLETED)), Pageable.unpaged());
         assertEquals(0, byUnmatchedStatus.getTotalElements());
     }
 
