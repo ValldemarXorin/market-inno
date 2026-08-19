@@ -103,6 +103,10 @@ class UserCreatedEventPublishingIntegrationTest {
                 for (ConsumerRecord<String, UserCreatedEvent> consumerRecord : consumerRecords) {
                     if (userId.equals(consumerRecord.value().userId())) {
                         events.add(consumerRecord.value());
+                for (ConsumerRecord<String, UserCreatedEvent> record : consumerRecords) {
+                    if (userId.equals(record.value().userId())) {
+                        events.add(record.value());
+
                     }
                 }
             }
