@@ -53,6 +53,11 @@ public class UserService {
         return userMapper.toResponse(user);
     }
 
+    public UserResponse getUserByEmail(String email) {
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new UserNotFoundException(email));
+        return userMapper.toResponse(user);
+    }
+
     public Page<UserResponse> getAllUsers(String name, String surname, Pageable pageable) {
         return userRepository
                 .findAll(UserSpecification.filterBy(name, surname), pageable)
