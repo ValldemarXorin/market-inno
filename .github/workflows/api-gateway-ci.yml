@@ -1,0 +1,54 @@
+name: API Gateway CI Pipeline
+
+on:
+  push:
+    paths:
+      - "api-gateway/**"
+    branches: [ "main", "develop" ]
+  pull_request:
+    paths:
+      - "api-gateway/**"
+    branches: [ "main", "develop" ]
+
+jobs:
+  pipeline-execution:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 23 Environment
+        uses: actions/setup-java@v4
+        with:
+          java-version: '23'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Grant executable rights for Gradle
+        run: chmod +x ./api-gateway/gradlew
+
+      - name: Step 1 - Build Application
+        run: ./api-gateway/gradlew -p api-gateway compileJava --no-daemon
+
+      - name: Step 2 - Run Unit and Integration Tests
+        run: ./api-gateway/gradlew -p api-gateway test jacocoTestReport --no-daemon
+
+      - name: Step 3 - SonarQube Code Analysis
+        uses: sonarsource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        with:
+          args: >
+            -Dsonar.projectKey=market-inno-api-gateway
+            -Dsonar.organization=valldemarxorin
+            -Dsonar.sources=api-gateway/src/main/java
+            -Dsonar.tests=api-gateway/src/test/java
+            -Dsonar.coverage.jacoco.xmlReportPaths=api-gateway/build/reports/jacoco/test/jacocoTestReport.xml
+            -Dsonar.coverage.exclusions=**/dto/**,**/config/**,**/exception/**,**/*Application.java,**/*MapperImpl.java,**/security/JwtValidationProperties.java
+
+      - name: Step 4 - Build Final Docker Image Artefact
+        run: docker build -t api-gateway-app:latest ./api-gateway

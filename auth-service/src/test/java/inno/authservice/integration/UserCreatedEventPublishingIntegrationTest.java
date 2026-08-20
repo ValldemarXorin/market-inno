@@ -2,6 +2,7 @@ package inno.authservice.integration;
 
 import inno.authservice.dto.response.RegisterResponse;
 import inno.authservice.entity.OutboxEvent;
+import inno.authservice.messaging.OutboxEventPublisher;
 import inno.authservice.messaging.UserCreatedEvent;
 import inno.authservice.repository.OutboxEventRepository;
 import inno.authservice.service.UserCredentialsService;
@@ -32,7 +33,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
 
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
 @EmbeddedKafka(partitions = 1, topics = "user-created-events")
 class UserCreatedEventPublishingIntegrationTest {
@@ -62,6 +63,9 @@ class UserCreatedEventPublishingIntegrationTest {
     private OutboxEventRepository outboxEventRepository;
 
     @Autowired
+    private OutboxEventPublisher outboxEventPublisher;
+
+    @Autowired
     private EmbeddedKafkaBroker broker;
 
     @Test
@@ -72,43 +76,75 @@ class UserCreatedEventPublishingIntegrationTest {
         OutboxEvent outboxEvent = outboxEventRepository.findAll().stream()
                 .filter(e -> e.getAggregateId().equals(registered.id()))
                 .findFirst()
-                .orElseThrow(() -> new AssertionError("outbox event not found for " + registered.id()));
-        assertThat(outboxEvent.getEventType()).isEqualTo(OutboxEvent.TYPE_USER_CREATED);
-        assertThat(outboxEvent.getAggregateId()).isEqualTo(registered.id());
-        assertThat(outboxEvent.getPayload()).contains(registered.id().toString());
+                .orElseThrow(() -> new AssertionError(
+                        "outbox event not found for " + registered.id()));
+
+        assertThat(outboxEvent.getEventType())
+                .isEqualTo(OutboxEvent.TYPE_USER_CREATED);
+        assertThat(outboxEvent.getAggregateId())
+                .isEqualTo(registered.id());
+        assertThat(outboxEvent.getPayload())
+                .contains(registered.id().toString());
+
+        // Trigger the production outbox publication logic directly.
+        // This avoids making the integration test dependent on scheduler timing.
+        outboxEventPublisher.publishPendingEvents();
 
         List<UserCreatedEvent> events = awaitEvents(registered.id(), 1);
 
         assertThat(events).hasSize(1);
+
         UserCreatedEvent event = events.get(0);
         assertThat(event.userId()).isEqualTo(registered.id());
     }
 
     private List<UserCreatedEvent> awaitEvents(UUID userId, int expectedCount) {
         Map<String, Object> props = new HashMap<>();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, broker.getBrokersAsString());
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "test-consumer-" + UUID.randomUUID());
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class.getName());
+        props.put(
+                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
+                broker.getBrokersAsString()
+        );
+        props.put(
+                ConsumerConfig.GROUP_ID_CONFIG,
+                "test-consumer-" + UUID.randomUUID()
+        );
+        props.put(
+                ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
+                "earliest"
+        );
+        props.put(
+                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
+                StringDeserializer.class.getName()
+        );
+        props.put(
+                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+                JsonDeserializer.class.getName()
+        );
 
         List<UserCreatedEvent> events = new ArrayList<>();
+
         try (KafkaConsumer<String, UserCreatedEvent> consumer =
-                     new KafkaConsumer<>(props, new StringDeserializer(), new JsonDeserializer<>(UserCreatedEvent.class))) {
+                     new KafkaConsumer<>(
+                             props,
+                             new StringDeserializer(),
+                             new JsonDeserializer<>(UserCreatedEvent.class)
+                     )) {
+
             consumer.subscribe(List.of("user-created-events"));
 
             long deadline = System.currentTimeMillis() + 10_000;
-            while (System.currentTimeMillis() < deadline && events.size() < expectedCount) {
-                ConsumerRecords<String, UserCreatedEvent> consumerRecords = consumer.poll(Duration.ofMillis(300));
-                for (ConsumerRecord<String, UserCreatedEvent> consumerRecord : consumerRecords) {
+
+            while (System.currentTimeMillis() < deadline
+                    && events.size() < expectedCount) {
+
+                ConsumerRecords<String, UserCreatedEvent> consumerRecords =
+                        consumer.poll(Duration.ofMillis(300));
+
+                for (ConsumerRecord<String, UserCreatedEvent> consumerRecord
+                        : consumerRecords) {
+
                     if (userId.equals(consumerRecord.value().userId())) {
                         events.add(consumerRecord.value());
-                        for (ConsumerRecord<String, UserCreatedEvent> record : consumerRecords) {
-                            if (userId.equals(record.value().userId())) {
-                                events.add(record.value());
-
-                            }
-                        }
                     }
                 }
                 if (events.size() < expectedCount) {
@@ -117,6 +153,12 @@ class UserCreatedEventPublishingIntegrationTest {
                 return events;
             }
         }
+
+        if (events.size() < expectedCount) {
+            fail("expected " + expectedCount
+                    + " events, got " + events.size());
+        }
+
         return events;
     }
 }

@@ -32,3 +32,10 @@ app:
     topic:
       user-status: user-status-events
       user-created: user-created-events
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVICE_URL:http://localhost:8761/eureka}
+  instance:
+    prefer-ip-address: true
