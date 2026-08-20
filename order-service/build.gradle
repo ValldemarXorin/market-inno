@@ -56,6 +56,10 @@ implementation 'org.springframework.boot:spring-boot-starter'
 
 	// Circuit breaker for synchronous Order -> User communication
 	implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.3.0'
+	// Align resilience4j family to 2.3.0 (2.2.0's spring6 lacks RxJava3FallbackDecorator used by spring-boot3 autoconfig)
+	implementation 'io.github.resilience4j:resilience4j-spring6:2.3.0'
+	// Runtime support for resilience4j fallback decorators (RxJava3FallbackDecorator)
+	implementation 'io.reactivex.rxjava3:rxjava'
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
