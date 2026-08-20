@@ -33,6 +33,7 @@ public class OrderController {
 
     @PostMapping("/orders")
     public ResponseEntity<OrderResponse> createOrder(@Valid @RequestBody CreateOrderRequest createOrderRequest) {
+        resourceSecurity.requireAuthenticated();
         OrderResponse orderResponseCreated = orderService.createOrder(createOrderRequest);
         return ResponseEntity
                 .created(URI.create("/api/v1/orders/" + orderResponseCreated.id()))
@@ -50,6 +51,7 @@ public class OrderController {
             @ModelAttribute OrderFilterRequest filter,
             Pageable pageable) {
 
+        resourceSecurity.requireAdmin();
         return ResponseEntity.ok(
                 orderService.getOrders(filter, pageable)
                         .map(this::enrich)

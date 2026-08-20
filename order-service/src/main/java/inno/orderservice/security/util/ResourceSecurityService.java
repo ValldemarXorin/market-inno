@@ -18,9 +18,15 @@ public class ResourceSecurityService {
     private final OrderRepository orderRepository;
 
     public void requireAdmin() {
+        currentUser.id();
         if (!currentUser.isAdmin()) {
             throw new ForbiddenException(FORBIDDEN_MESSAGE);
         }
+    }
+
+    public void requireAuthenticated() {
+        currentUser.id();
+        currentUser.role();
     }
 
     public void requireAdminOrSelf(UUID resourceOwnerId) {
