@@ -29,7 +29,7 @@ import java.time.Month;
 @SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
 @EmbeddedKafka(partitions = 1, topics = {"user-created-events", "user-status-events"})
 @AutoConfigureMockMvc
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 public class UserControllerIntegrationTest {
 
     @Autowired
@@ -57,8 +57,6 @@ public class UserControllerIntegrationTest {
         registry.add("spring.data.redis.port", () -> myRedis.getMappedPort(6379));
 
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
-
-        registry.add("auth.jwt.secret", () -> TestTokens.SECRET);
     }
 
     @Test
@@ -82,18 +80,18 @@ public class UserControllerIntegrationTest {
         String idFromDb = createdUser.id().toString();
 
         mockMvc.perform(get("/users/" + idFromDb)
-                        .header("Authorization", "Bearer " + TestTokens.adminToken()))
+                        .headers(TestIdentity.adminHeaders()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(idFromDb))
                 .andExpect(jsonPath("$.username").value("Masha"));
 
         mockMvc.perform(get("/users/" + idFromDb)
-                        .header("Authorization", "Bearer " + TestTokens.adminToken()))
+                        .headers(TestIdentity.adminHeaders()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(idFromDb));
 
         mockMvc.perform(get("/users/00000000-0000-0000-0000-000000000000")
-                        .header("Authorization", "Bearer " + TestTokens.adminToken()))
+                        .headers(TestIdentity.adminHeaders()))
                 .andExpect(status().isNotFound());
     }
 }

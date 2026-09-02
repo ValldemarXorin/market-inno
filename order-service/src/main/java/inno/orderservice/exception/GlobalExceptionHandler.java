@@ -4,10 +4,12 @@ import inno.orderservice.dto.response.ErrorResponse;
 import inno.orderservice.exception.custom_exception.ItemNotFoundException;
 import inno.orderservice.exception.custom_exception.OrderNotFoundException;
 import inno.orderservice.exception.custom_exception.UserNotFoundException;
+import inno.orderservice.security.exception.ForbiddenException;
+import inno.orderservice.security.exception.InvalidIdentityException;
+import inno.orderservice.security.exception.MissingIdentityException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -37,9 +39,22 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
 
-    @ExceptionHandler(AccessDeniedException.class)
-    public void handleAccessDenied(AccessDeniedException ex) throws AccessDeniedException {
-        throw ex;
+    @ExceptionHandler(MissingIdentityException.class)
+    public ResponseEntity<ErrorResponse> handleMissingIdentity(
+            MissingIdentityException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(InvalidIdentityException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidIdentity(
+            InvalidIdentityException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ErrorResponse> handleForbidden(
+            ForbiddenException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

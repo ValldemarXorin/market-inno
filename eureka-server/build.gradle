@@ -1,0 +1,62 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.4.2'
+	id 'io.spring.dependency-management' version '1.1.7'
+	id 'jacoco'
+}
+
+ext {
+	springCloudVersion = "2024.0.3"
+}
+
+group = 'inno'
+version = '0.0.1-SNAPSHOT'
+description = 'eureka-server'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(23)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-server'
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+dependencyManagement {
+	imports {
+		mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+	}
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+	finalizedBy jacocoTestReport
+}
+
+jacocoTestReport {
+	dependsOn test
+
+	reports {
+		xml.required = true
+		html.required = true
+	}
+
+	classDirectories.setFrom(files(classDirectories.files.collect {
+		fileTree(dir: it, exclude: [
+				'**/*MapperImpl*.*',
+				'inno/**/exception/**',
+				'inno/**/*Application.*',
+				'inno/**/config/**',
+				'inno/**/dto/**'
+		])
+	}))
+}

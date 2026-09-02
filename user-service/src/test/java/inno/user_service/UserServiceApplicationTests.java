@@ -13,7 +13,7 @@ import org.testcontainers.utility.DockerImageName;
 
 @SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
 @EmbeddedKafka(partitions = 1, topics = {"user-created-events", "user-status-events"})
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 class UserServiceApplicationTests {
 
 	@Container
@@ -34,8 +34,6 @@ class UserServiceApplicationTests {
 
 		registry.add("spring.data.redis.host", redis::getHost);
 		registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
-
-		registry.add("auth.jwt.secret", () -> TestTokens.SECRET);
 	}
 
 	@Test

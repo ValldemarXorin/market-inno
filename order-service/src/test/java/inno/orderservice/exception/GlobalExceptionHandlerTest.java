@@ -4,18 +4,19 @@ import inno.orderservice.dto.response.ErrorResponse;
 import inno.orderservice.exception.custom_exception.ItemNotFoundException;
 import inno.orderservice.exception.custom_exception.OrderNotFoundException;
 import inno.orderservice.exception.custom_exception.UserNotFoundException;
+import inno.orderservice.security.exception.ForbiddenException;
+import inno.orderservice.security.exception.InvalidIdentityException;
+import inno.orderservice.security.exception.MissingIdentityException;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class GlobalExceptionHandlerTest {
 
@@ -54,9 +55,30 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void shouldRethrowAccessDeniedException() {
-        assertThrows(AccessDeniedException.class,
-                () -> handler.handleAccessDenied(new AccessDeniedException("denied")));
+    void shouldReturnUnauthorizedForMissingIdentity() {
+        ResponseEntity<ErrorResponse> response = handler.handleMissingIdentity(
+                new MissingIdentityException("Authentication required"), request);
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertEquals("Authentication required", response.getBody().message());
+    }
+
+    @Test
+    void shouldReturnUnauthorizedForInvalidIdentity() {
+        ResponseEntity<ErrorResponse> response = handler.handleInvalidIdentity(
+                new InvalidIdentityException("X-User-Id is not a valid UUID"), request);
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertEquals("X-User-Id is not a valid UUID", response.getBody().message());
+    }
+
+    @Test
+    void shouldReturnForbiddenForForbiddenException() {
+        ResponseEntity<ErrorResponse> response = handler.handleForbidden(
+                new ForbiddenException("You do not have permission to access this resource"), request);
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        assertEquals("You do not have permission to access this resource", response.getBody().message());
     }
 
     @Test

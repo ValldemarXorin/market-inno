@@ -9,7 +9,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
 @EmbeddedKafka(partitions = 1)
 class OrderServiceApplicationTests {
@@ -27,8 +27,6 @@ class OrderServiceApplicationTests {
 		registry.add("spring.datasource.password", postgres::getPassword);
 
 		registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
-
-		registry.add("auth.jwt.secret", () -> TestTokens.SECRET);
 	}
 
 	@Test

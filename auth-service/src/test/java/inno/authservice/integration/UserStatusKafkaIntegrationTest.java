@@ -33,7 +33,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.fail;
 
 @SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 @EmbeddedKafka(partitions = 1, topics = "user-status-events")
 class UserStatusKafkaIntegrationTest {
 

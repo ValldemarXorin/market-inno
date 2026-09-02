@@ -11,15 +11,15 @@ public class RestClientConfig {
     @Bean
     public RestClient userServiceRestClient(
             @Value("${app.user-service.base-url:http://localhost:8080/api/v1}") String baseUrl,
-            JwtForwardingInterceptor jwtForwardingInterceptor) {
+            IdentityForwardingInterceptor identityForwardingInterceptor) {
         return RestClient.builder()
                 .baseUrl(baseUrl)
-                .requestInterceptor(jwtForwardingInterceptor)
+                .requestInterceptor(identityForwardingInterceptor)
                 .build();
     }
 
     @Bean
-    public JwtForwardingInterceptor jwtForwardingInterceptor() {
-        return new JwtForwardingInterceptor();
+    public IdentityForwardingInterceptor identityForwardingInterceptor() {
+        return new IdentityForwardingInterceptor();
     }
 }

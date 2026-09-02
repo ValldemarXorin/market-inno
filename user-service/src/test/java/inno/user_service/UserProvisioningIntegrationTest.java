@@ -37,7 +37,7 @@ import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
 @EmbeddedKafka(partitions = 1, topics = {"user-created-events", "user-status-events"})
 class UserProvisioningIntegrationTest {
@@ -61,8 +61,6 @@ class UserProvisioningIntegrationTest {
         registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
 
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
-
-        registry.add("auth.jwt.secret", () -> TestTokens.SECRET);
     }
 
     @Autowired
