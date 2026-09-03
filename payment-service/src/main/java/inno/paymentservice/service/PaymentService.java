@@ -7,6 +7,8 @@ import inno.paymentservice.dto.response.PaymentResponse;
 import inno.paymentservice.dto.response.TotalResponse;
 import inno.paymentservice.entity.Payment;
 import inno.paymentservice.entity.PaymentStatus;
+import inno.paymentservice.event.CreatePaymentEvent;
+import inno.paymentservice.event.CreatePaymentEventProducer;
 import inno.paymentservice.mapper.PaymentMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,7 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final PaymentMapper paymentMapper;
     private final RandomNumberClient randomNumberClient;
+    private final CreatePaymentEventProducer createPaymentEventProducer;
 
     @Transactional
     public PaymentResponse createPayment(CreatePaymentRequest request) {
@@ -30,6 +33,8 @@ public class PaymentService {
         payment.setStatus(determineStatus(randomNumberClient.getRandomNumber().number()));
 
         Payment saved = paymentRepository.save(payment);
+        createPaymentEventProducer.publish(
+                new CreatePaymentEvent(saved.getId(), saved.getOrderId(), saved.getStatus()));
         return paymentMapper.toResponse(saved);
     }
 

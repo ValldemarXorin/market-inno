@@ -45,7 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Testcontainers()
 @SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
-@EmbeddedKafka(partitions = 1, topics = {"payment-created-events"})
+@EmbeddedKafka(partitions = 1, topics = {"create-payment-events"})
 @Transactional
 class OrderServiceIntegrationTest {
 

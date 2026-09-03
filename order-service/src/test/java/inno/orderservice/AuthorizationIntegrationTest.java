@@ -38,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
-@EmbeddedKafka(partitions = 1, topics = {"payment-created-events"})
+@EmbeddedKafka(partitions = 1, topics = {"create-payment-events"})
 @AutoConfigureMockMvc
 class AuthorizationIntegrationTest {
 

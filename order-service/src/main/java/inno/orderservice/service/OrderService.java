@@ -17,7 +17,7 @@ import inno.orderservice.entity.OrderStatus;
 import inno.orderservice.exception.custom_exception.ItemNotFoundException;
 import inno.orderservice.exception.custom_exception.OrderNotFoundException;
 import inno.orderservice.exception.custom_exception.UserNotFoundException;
-import inno.orderservice.event.PaymentCreatedEvent;
+import inno.orderservice.event.CreatePaymentEvent;
 import inno.orderservice.mapper.OrderMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -111,7 +111,7 @@ public class OrderService {
     }
 
     @Transactional
-    public void processPayment(PaymentCreatedEvent event) {
+    public void processPayment(CreatePaymentEvent event) {
         OrderStatus targetStatus = switch (event.status()) {
             case SUCCESSFUL -> OrderStatus.COMPLETED;
             case UNSUCCESSFUL -> OrderStatus.CANCELLED;

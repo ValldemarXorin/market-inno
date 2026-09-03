@@ -8,6 +8,8 @@ import inno.paymentservice.dto.response.RandomResponse;
 import inno.paymentservice.dto.response.TotalResponse;
 import inno.paymentservice.entity.Payment;
 import inno.paymentservice.entity.PaymentStatus;
+import inno.paymentservice.event.CreatePaymentEvent;
+import inno.paymentservice.event.CreatePaymentEventProducer;
 import inno.paymentservice.mapper.PaymentMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +40,9 @@ public class PaymentServiceTest {
 
     @Mock
     private RandomNumberClient randomNumberClient;
+
+    @Mock
+    private CreatePaymentEventProducer createPaymentEventProducer;
 
     @InjectMocks
     private PaymentService paymentService;
@@ -94,6 +99,13 @@ public class PaymentServiceTest {
         assertEquals(testUserId, saved.getUserId());
         assertEquals(testTimestamp, saved.getTimestamp());
         assertEquals(new BigDecimal("100.00"), saved.getPaymentAmount());
+
+        ArgumentCaptor<CreatePaymentEvent> eventCaptor = ArgumentCaptor.forClass(CreatePaymentEvent.class);
+        verify(createPaymentEventProducer).publish(eventCaptor.capture());
+        CreatePaymentEvent published = eventCaptor.getValue();
+        assertEquals(testPaymentId, published.paymentId());
+        assertEquals(testOrderId, published.orderId());
+        assertEquals(PaymentStatus.SUCCESSFUL, published.status());
     }
 
     @Test
@@ -109,6 +121,10 @@ public class PaymentServiceTest {
         Payment saved = paymentCaptor.getValue();
 
         assertEquals(PaymentStatus.UNSUCCESSFUL, saved.getStatus());
+
+        ArgumentCaptor<CreatePaymentEvent> eventCaptor = ArgumentCaptor.forClass(CreatePaymentEvent.class);
+        verify(createPaymentEventProducer).publish(eventCaptor.capture());
+        assertEquals(PaymentStatus.UNSUCCESSFUL, eventCaptor.getValue().status());
     }
 
     @Test

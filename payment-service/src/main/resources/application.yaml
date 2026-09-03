@@ -18,6 +18,9 @@ spring:
 app:
   random-number-api:
     base-url: ${RANDOM_NUMBER_API_BASE_URL:http://localhost:8085}
+  kafka:
+    topic:
+      create-payment: create-payment-events
 
 logging:
   level:

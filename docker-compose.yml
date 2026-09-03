@@ -173,6 +173,33 @@ services:
       start_period: 60s
     restart: unless-stopped
 
+  payment-service:
+    build:
+      context: ./payment-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_NAME: ${PAYMENT_DB_NAME:-paymentservice}
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      RANDOM_NUMBER_API_BASE_URL: ${RANDOM_NUMBER_API_BASE_URL:-http://localhost:8085}
+      JWT_SECRET: ${JWT_SECRET:-replace_with_a_random_secret_at_least_32_bytes_long}
+      EUREKA_SERVICE_URL: http://eureka-server:8761/eureka
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      eureka-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/v1/ >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+    restart: unless-stopped
+
   # External entry point - the only application service exposed to the host
   api-gateway:
     build:
