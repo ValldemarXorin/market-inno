@@ -101,7 +101,7 @@ public class PaymentServiceTest {
         assertEquals(new BigDecimal("100.00"), saved.getPaymentAmount());
 
         ArgumentCaptor<CreatePaymentEvent> eventCaptor = ArgumentCaptor.forClass(CreatePaymentEvent.class);
-        verify(createPaymentEventProducer).publish(eventCaptor.capture());
+        verify(createPaymentEventProducer, times(1)).publish(eventCaptor.capture());
         CreatePaymentEvent published = eventCaptor.getValue();
         assertEquals(testPaymentId, published.paymentId());
         assertEquals(testOrderId, published.orderId());
@@ -123,8 +123,20 @@ public class PaymentServiceTest {
         assertEquals(PaymentStatus.UNSUCCESSFUL, saved.getStatus());
 
         ArgumentCaptor<CreatePaymentEvent> eventCaptor = ArgumentCaptor.forClass(CreatePaymentEvent.class);
-        verify(createPaymentEventProducer).publish(eventCaptor.capture());
+        verify(createPaymentEventProducer, times(1)).publish(eventCaptor.capture());
         assertEquals(PaymentStatus.UNSUCCESSFUL, eventCaptor.getValue().status());
+    }
+
+    @Test
+    public void shouldNotSaveOrPublishWhenRandomNumberClientFails() {
+        when(paymentMapper.toEntity(any(CreatePaymentRequest.class))).thenReturn(testPayment);
+        when(randomNumberClient.getRandomNumber())
+                .thenThrow(new IllegalStateException("random number api unavailable"));
+
+        assertThrows(IllegalStateException.class, () -> paymentService.createPayment(testCreatePaymentRequest));
+
+        verify(paymentRepository, never()).save(any());
+        verify(createPaymentEventProducer, never()).publish(any());
     }
 
     @Test
