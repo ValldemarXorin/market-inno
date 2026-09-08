@@ -36,6 +36,9 @@ public class SecurityConfig {
                 .authorizeExchange(auth -> auth
                         .pathMatchers(HttpMethod.POST, PUBLIC_ENDPOINTS).permitAll()
 
+                        // Docker healthcheck endpoint
+                        .pathMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+
                         // admin-only
                         .pathMatchers(HttpMethod.GET, "/api/v1/users/by-email/**").hasRole("ADMIN")
                         .pathMatchers(HttpMethod.GET, "/api/v1/users").hasRole("ADMIN")
