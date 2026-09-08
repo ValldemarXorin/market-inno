@@ -1,5 +1,6 @@
 package inno.paymentservice.dto.response;
 
+import inno.paymentservice.entity.PaymentCurrency;
 import inno.paymentservice.entity.PaymentStatus;
 
 import java.math.BigDecimal;
@@ -12,6 +13,8 @@ public record PaymentResponse(
         UUID userId,
         PaymentStatus status,
         LocalDateTime timestamp,
-        BigDecimal paymentAmount
+        BigDecimal paymentAmount,
+        PaymentCurrency currency,
+        String stripePaymentIntentId
 ) {
 }

@@ -14,7 +14,8 @@ RUN ./gradlew bootJar -x test --no-daemon
 FROM eclipse-temurin:23-jre-alpine
 WORKDIR /runtime
 
-RUN addgroup -S runtimegroup && adduser -S runtimeuser -G runtimegroup
+RUN addgroup -S runtimegroup && adduser -S runtimeuser -G runtimegroup \
+    && mkdir -p /runtime/logs && chown -R runtimeuser:runtimegroup /runtime/logs
 USER runtimeuser
 
 COPY --from=app-compiler /source/build/libs/*.jar application.jar

@@ -1,10 +1,13 @@
 package inno.paymentservice;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.tomakehurst.wiremock.WireMockServer;
+import com.stripe.exception.ApiException;
+import com.stripe.model.PaymentIntent;
+import inno.paymentservice.client.StripePaymentClient;
 import inno.paymentservice.dao.repository.PaymentRepository;
 import inno.paymentservice.dto.response.PaymentResponse;
 import inno.paymentservice.entity.Payment;
+import inno.paymentservice.entity.PaymentCurrency;
 import inno.paymentservice.entity.PaymentStatus;
 import inno.paymentservice.event.CreatePaymentEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -12,13 +15,12 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
@@ -26,7 +28,7 @@ import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.containers.MongoDBContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -40,16 +42,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Testcontainers(disabledWithoutDocker = true)
-@SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
+@SpringBootTest(properties = {
+        "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}",
+        "stripe.secret-key=sk_test_placeholder"
+})
 @EmbeddedKafka(partitions = 1, topics = {"create-payment-events"})
 @AutoConfigureMockMvc
 class PaymentControllerIntegrationTest {
@@ -57,30 +63,12 @@ class PaymentControllerIntegrationTest {
     private static final String TOPIC = "create-payment-events";
 
     @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17")
-            .withDatabaseName("paymentservice")
-            .withUsername("postgres")
-            .withPassword("postgres");
-
-    private static final WireMockServer wireMockServer = new WireMockServer(0);
+    static MongoDBContainer mongo = new MongoDBContainer("mongo:7");
 
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
-        wireMockServer.start();
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
-
-        registry.add("app.random-number-api.base-url", () -> "http://localhost:" + wireMockServer.port());
-    }
-
-    @AfterAll
-    static void stopServer() {
-        if (wireMockServer != null) {
-            wireMockServer.stop();
-        }
+        registry.add("spring.data.mongodb.uri",
+                () -> mongo.getConnectionString() + "/payments?directConnection=true");
     }
 
     @Autowired
@@ -92,13 +80,10 @@ class PaymentControllerIntegrationTest {
     @Autowired
     private EmbeddedKafkaBroker broker;
 
-    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+    @MockBean
+    private StripePaymentClient stripePaymentClient;
 
-    @BeforeEach
-    void setUp() {
-        wireMockServer.resetAll();
-        stubRandomNumber(4);
-    }
+    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     @AfterEach
     void cleanUp() {
@@ -106,9 +91,12 @@ class PaymentControllerIntegrationTest {
     }
 
     @Test
-    void shouldCreateSuccessfulPaymentPersistingToPostgresAndProducingKafkaEvent() throws Exception {
+    void shouldCreateSuccessfulPaymentPersistingToMongoAndProducingKafkaEvent() throws Exception {
         UUID orderId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
+        when(stripePaymentClient.createAndConfirmPaymentIntent(
+                any(BigDecimal.class), any(String.class), any(UUID.class), any(String.class)))
+                .thenReturn(paymentIntent("pi_test_123", "succeeded"));
 
         var result = mockMvc.perform(post("/payments")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -119,6 +107,8 @@ class PaymentControllerIntegrationTest {
                 .andExpect(jsonPath("$.status").value("SUCCESSFUL"))
                 .andExpect(jsonPath("$.timestamp").value("2026-01-01T12:00:00"))
                 .andExpect(jsonPath("$.paymentAmount").value(100.00))
+                .andExpect(jsonPath("$.currency").value("USD"))
+                .andExpect(jsonPath("$.stripePaymentIntentId").value("pi_test_123"))
                 .andReturn();
 
         PaymentResponse created =
@@ -133,6 +123,8 @@ class PaymentControllerIntegrationTest {
         assertEquals(userId, persisted.getUserId());
         assertEquals(PaymentStatus.SUCCESSFUL, persisted.getStatus());
         assertEquals(new BigDecimal("100.00"), persisted.getPaymentAmount());
+        assertEquals(PaymentCurrency.USD, persisted.getCurrency());
+        assertEquals("pi_test_123", persisted.getStripePaymentIntentId());
         assertEquals(LocalDateTime.of(2026, Month.JANUARY, 1, 12, 0), persisted.getTimestamp());
 
         List<CreatePaymentEvent> events = awaitEvents(TOPIC, created.id(), CreatePaymentEvent.class, 1);
@@ -143,11 +135,12 @@ class PaymentControllerIntegrationTest {
     }
 
     @Test
-    void shouldCreateUnsuccessfulPaymentWhenRandomNumberIsOdd() throws Exception {
-        stubRandomNumber(5);
-
+    void shouldCreateUnsuccessfulPaymentWhenStripePaymentFails() throws Exception {
         UUID orderId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
+        when(stripePaymentClient.createAndConfirmPaymentIntent(
+                any(BigDecimal.class), any(String.class), any(UUID.class), any(String.class)))
+                .thenReturn(paymentIntent("pi_test_456", "requires_payment_method"));
 
         String responseContent = mockMvc.perform(post("/payments")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -162,6 +155,7 @@ class PaymentControllerIntegrationTest {
         Payment persisted = paymentRepository.findById(created.id()).orElseThrow();
         assertEquals(PaymentStatus.UNSUCCESSFUL, persisted.getStatus());
         assertEquals(new BigDecimal("50.00"), persisted.getPaymentAmount());
+        assertEquals("pi_test_456", persisted.getStripePaymentIntentId());
 
         List<CreatePaymentEvent> events = awaitEvents(TOPIC, created.id(), CreatePaymentEvent.class, 1);
         CreatePaymentEvent event = events.get(0);
@@ -181,7 +175,7 @@ class PaymentControllerIntegrationTest {
             mockMvc.perform(post("/payments")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
-                                    {"orderId":null,"userId":"%s","timestamp":"2026-01-01T12:00:00","paymentAmount":-5}
+                                    {"orderId":null,"userId":"%s","timestamp":"2026-01-01T12:00:00","paymentAmount":-5,"currency":"USD"}
                                     """.formatted(UUID.randomUUID())))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.status").value(400))
@@ -195,17 +189,37 @@ class PaymentControllerIntegrationTest {
         }
     }
 
-    private void stubRandomNumber(int number) {
-        wireMockServer.stubFor(get(urlPathMatching("/"))
-                .willReturn(aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody("{\"number\":" + number + "}")));
+    @Test
+    void shouldReturnBadGatewayWhenStripeApiThrows() throws Exception {
+        when(stripePaymentClient.createAndConfirmPaymentIntent(
+                any(BigDecimal.class), any(String.class), any(UUID.class), any(String.class)))
+                .thenThrow(new ApiException("card declined", null, "card_declined", 402, null));
+
+        UUID orderId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        mockMvc.perform(post("/payments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(paymentJson(orderId, userId, "2026-01-01T12:00:00", "100.00")))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.status").value(502))
+                .andExpect(jsonPath("$.message",
+                        org.hamcrest.Matchers.containsString(
+                                "Stripe payment failed for order " + orderId)));
+
+        assertEquals(0, paymentRepository.count());
+    }
+
+    private PaymentIntent paymentIntent(String id, String status) {
+        PaymentIntent paymentIntent = new PaymentIntent();
+        paymentIntent.setId(id);
+        paymentIntent.setStatus(status);
+        return paymentIntent;
     }
 
     private String paymentJson(UUID orderId, UUID userId, String timestamp, String amount) {
         return """
-                {"orderId":"%s","userId":"%s","timestamp":"%s","paymentAmount":%s}
+                {"orderId":"%s","userId":"%s","timestamp":"%s","paymentAmount":%s,"currency":"USD"}
                 """.formatted(orderId, userId, timestamp, amount);
     }
 

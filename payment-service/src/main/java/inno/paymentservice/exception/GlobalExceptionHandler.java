@@ -1,6 +1,7 @@
 package inno.paymentservice.exception;
 
 import inno.paymentservice.dto.response.ErrorResponse;
+import inno.paymentservice.exception.custom_exception.StripePaymentException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,12 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(StripePaymentException.class)
+    public ResponseEntity<ErrorResponse> handleStripePaymentException(
+            StripePaymentException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_GATEWAY, ex.getMessage(), request);
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationException(

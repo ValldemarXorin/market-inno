@@ -1,5 +1,6 @@
 package inno.paymentservice.dto.request;
 
+import inno.paymentservice.entity.PaymentCurrency;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 
@@ -19,6 +20,9 @@ public record CreatePaymentRequest(
 
         @NotNull(message = "Payment amount must not be null")
         @DecimalMin(value = "0.01", message = "Payment amount must be positive")
-        BigDecimal paymentAmount
+        BigDecimal paymentAmount,
+
+        @NotNull(message = "Payment currency must not be null")
+        PaymentCurrency currency
 ) {
 }

@@ -8,6 +8,7 @@ plugins {
 ext {
 	mapstructVersion = "1.6.3"
 	springCloudVersion = "2024.0.3"
+	stripeJavaVersion = "33.4.1"
 }
 
 group = 'inno'
@@ -24,11 +25,6 @@ repositories {
 }
 
 dependencies {
-	implementation 'org.liquibase:liquibase-core'
-
-	// PostgreSQL driver
-	runtimeOnly 'org.postgresql:postgresql'
-
 	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 
 	// Модуль для поддержки десериализации Record (без пустых конструкторов)
@@ -44,8 +40,9 @@ dependencies {
 
 	implementation 'org.springframework.boot:spring-boot-starter'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
-	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
 	implementation 'org.springframework.boot:spring-boot-starter-aop'
 
@@ -53,6 +50,9 @@ dependencies {
 
 	// Service discovery registration (used by the api-gateway lb:// routes)
 	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+
+	// Official Stripe Java SDK (TEST MODE only, configured via STRIPE_SECRET_KEY env var)
+	implementation "com.stripe:stripe-java:${stripeJavaVersion}"
 
 	// Circuit breaker for synchronous Order -> User communication
 	implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.3.0'
@@ -65,11 +65,8 @@ dependencies {
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
 	testImplementation 'org.testcontainers:junit-jupiter:1.20.1'
-	testImplementation 'org.testcontainers:postgresql:1.20.1'
+	testImplementation 'org.testcontainers:mongodb:1.20.1'
 	testImplementation 'org.springframework.kafka:spring-kafka-test'
-
-	// WireMock for mocking User Service HTTP communication in integration tests
-	testImplementation 'org.wiremock:wiremock-standalone:3.13.2'
 }
 
 dependencyManagement {

@@ -2,6 +2,7 @@ package inno.paymentservice.controller;
 
 import inno.paymentservice.dto.request.CreatePaymentRequest;
 import inno.paymentservice.dto.response.PaymentResponse;
+import inno.paymentservice.entity.PaymentCurrency;
 import inno.paymentservice.entity.PaymentStatus;
 import inno.paymentservice.service.PaymentService;
 import org.junit.jupiter.api.Test;
@@ -41,14 +42,15 @@ class PaymentControllerTest {
         UUID paymentId = UUID.randomUUID();
         LocalDateTime timestamp = LocalDateTime.of(2026, Month.JANUARY, 1, 12, 0);
         PaymentResponse paymentResponse = new PaymentResponse(
-                paymentId, orderId, userId, PaymentStatus.SUCCESSFUL, timestamp, new BigDecimal("100.00"));
+                paymentId, orderId, userId, PaymentStatus.SUCCESSFUL, timestamp,
+                new BigDecimal("100.00"), PaymentCurrency.USD, "pi_test_123");
 
         when(paymentService.createPayment(any(CreatePaymentRequest.class))).thenReturn(paymentResponse);
 
         mockMvc.perform(post("/payments")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"orderId":"%s","userId":"%s","timestamp":"2026-01-01T12:00:00","paymentAmount":100.00}
+                                {"orderId":"%s","userId":"%s","timestamp":"2026-01-01T12:00:00","paymentAmount":100.00,"currency":"USD"}
                                 """.formatted(orderId, userId)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(paymentId.toString()))
@@ -56,7 +58,9 @@ class PaymentControllerTest {
                 .andExpect(jsonPath("$.userId").value(userId.toString()))
                 .andExpect(jsonPath("$.status").value("SUCCESSFUL"))
                 .andExpect(jsonPath("$.timestamp").value("2026-01-01T12:00:00"))
-                .andExpect(jsonPath("$.paymentAmount").value(100.00));
+                .andExpect(jsonPath("$.paymentAmount").value(100.00))
+                .andExpect(jsonPath("$.currency").value("USD"))
+                .andExpect(jsonPath("$.stripePaymentIntentId").value("pi_test_123"));
 
         verify(paymentService).createPayment(any(CreatePaymentRequest.class));
     }
@@ -66,7 +70,7 @@ class PaymentControllerTest {
         mockMvc.perform(post("/payments")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"orderId":null,"userId":"%s","timestamp":"2026-01-01T12:00:00","paymentAmount":-5}
+                                {"orderId":null,"userId":"%s","timestamp":"2026-01-01T12:00:00","paymentAmount":-5,"currency":"USD"}
                                 """.formatted(userId)))
                 .andExpect(status().isBadRequest());
 

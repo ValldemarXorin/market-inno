@@ -1,10 +1,13 @@
 package inno.paymentservice.entity;
 
-import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.UuidGenerator;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+import org.springframework.data.mongodb.core.mapping.FieldType;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -13,27 +16,27 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
-@Entity
-@Table(name = "payments")
+@Document(collection = "payments")
 public class Payment extends BaseEntity {
 
     @Id
-    @UuidGenerator(style = UuidGenerator.Style.TIME)
     private UUID id;
 
-    @Column(name = "order_id", nullable = false)
+    @Indexed
     private UUID orderId;
 
-    @Column(name = "user_id", nullable = false)
+    @Indexed
     private UUID userId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
     private PaymentStatus status;
 
-    @Column(nullable = false)
+    @Indexed
     private LocalDateTime timestamp;
 
-    @Column(name = "payment_amount", nullable = false, precision = 12, scale = 2)
+    @Field(targetType = FieldType.DECIMAL128)
     private BigDecimal paymentAmount;
+
+    private PaymentCurrency currency;
+
+    private String stripePaymentIntentId;
 }

@@ -13,6 +13,7 @@ public interface PaymentMapper {
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "stripePaymentIntentId", ignore = true)
     Payment toEntity(CreatePaymentRequest request);
 
     PaymentResponse toResponse(Payment payment);

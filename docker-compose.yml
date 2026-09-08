@@ -84,6 +84,20 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # MongoDB for payment-service
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_payment_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   # Application services (internal network only)
 
   auth-service:
@@ -178,21 +192,19 @@ services:
       context: ./payment-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      DB_NAME: ${PAYMENT_DB_NAME:-paymentservice}
-      DB_USERNAME: ${DB_USERNAME:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      MONGODB_URI: mongodb://mongodb:27017/payments
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      RANDOM_NUMBER_API_BASE_URL: ${RANDOM_NUMBER_API_BASE_URL:-http://localhost:8085}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_placeholder}
       EUREKA_SERVICE_URL: http://eureka-server:8761/eureka
     depends_on:
-      postgres-db:
+      mongodb:
         condition: service_healthy
       kafka:
         condition: service_started
       eureka-server:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/v1/ >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/v1/actuator/health >/dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -231,6 +243,7 @@ services:
 volumes:
   auth_postgres_data:
   pg_user_data:
+  mongo_payment_data:
 
 networks:
   default:
