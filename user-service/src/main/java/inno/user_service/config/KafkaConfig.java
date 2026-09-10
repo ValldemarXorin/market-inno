@@ -44,6 +44,7 @@ public class KafkaConfig {
         Map<String, Object> props = kafkaProperties.buildConsumerProperties(null);
         JsonDeserializer<UserCreatedEvent> valueDeserializer =
                 new JsonDeserializer<>(UserCreatedEvent.class, JacksonUtils.enhancedObjectMapper());
+        valueDeserializer.addTrustedPackages("inno.authservice.messaging");
         return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), valueDeserializer);
     }
 

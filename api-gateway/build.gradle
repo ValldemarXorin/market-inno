@@ -48,6 +48,9 @@ dependencies {
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	// WireMock for stubbing downstream services in integration tests
+	testImplementation 'org.wiremock:wiremock-standalone:3.13.2'
 }
 
 dependencyManagement {

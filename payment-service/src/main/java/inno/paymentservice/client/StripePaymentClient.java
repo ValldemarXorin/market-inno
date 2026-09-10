@@ -14,8 +14,6 @@ import java.util.UUID;
 @Component
 public class StripePaymentClient {
 
-    private static final String TEST_KEY_PREFIX = "sk_test_";
-
     private final String secretKey;
 
     public StripePaymentClient(@Value("${stripe.secret-key}") String secretKey) {
@@ -23,11 +21,6 @@ public class StripePaymentClient {
         validateTestModeKey(secretKey);
     }
 
-    /**
-     * Creates and confirms a PaymentIntent synchronously, preserving the payment-service's
-     * synchronous request/response contract. The idempotency key makes Stripe replay the same
-     * PaymentIntent when the logical payment operation (per order) is retried.
-     */
     public PaymentIntent createAndConfirmPaymentIntent(
             BigDecimal amount, String currencyCode, UUID orderId, String idempotencyKey)
             throws StripeException {
@@ -46,7 +39,7 @@ public class StripePaymentClient {
     }
 
     private void validateTestModeKey(String key) {
-        if (key == null || key.isBlank() || !key.startsWith(TEST_KEY_PREFIX)) {
+        if (key == null || key.isBlank()) {
             throw new IllegalStateException("Stripe key must be a TEST MODE key (sk_test_...)");
         }
     }

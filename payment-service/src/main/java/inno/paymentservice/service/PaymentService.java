@@ -73,8 +73,6 @@ public class PaymentService {
     }
 
     private PaymentIntent createStripePaymentIntent(CreatePaymentRequest request) {
-        // Idempotency key is derived from order id, so a retried operation cannot create a
-        // duplicate Stripe charge: Stripe replays the original PaymentIntent for the key.
         try {
             return stripePaymentClient.createAndConfirmPaymentIntent(
                     request.paymentAmount(),

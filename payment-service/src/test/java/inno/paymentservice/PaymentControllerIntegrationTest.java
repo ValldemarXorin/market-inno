@@ -52,10 +52,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Testcontainers(disabledWithoutDocker = true)
-@SpringBootTest(properties = {
-        "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}",
-        "stripe.secret-key=sk_test_placeholder"
-})
+@SpringBootTest(properties = "stripe.secret-key=sk_test_placeholder")
 @EmbeddedKafka(partitions = 1, topics = {"create-payment-events"})
 @AutoConfigureMockMvc
 class PaymentControllerIntegrationTest {

@@ -44,6 +44,7 @@ public class KafkaConfig {
         Map<String, Object> props = kafkaProperties.buildConsumerProperties(null);
         JsonDeserializer<CreatePaymentEvent> valueDeserializer =
                 new JsonDeserializer<>(CreatePaymentEvent.class, JacksonUtils.enhancedObjectMapper());
+        valueDeserializer.addTrustedPackages("inno.paymentservice.event");
         return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), valueDeserializer);
     }
 
