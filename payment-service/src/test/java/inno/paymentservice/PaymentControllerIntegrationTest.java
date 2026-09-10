@@ -1,6 +1,5 @@
 package inno.paymentservice;
 
-import org.springframework.context.annotation.Bean;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stripe.exception.ApiException;
 import com.stripe.model.PaymentIntent;
@@ -15,23 +14,15 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
-import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-import org.springframework.kafka.core.DefaultKafkaProducerFactory;
-import org.springframework.kafka.core.ProducerFactory;
-import org.springframework.kafka.support.JacksonUtils;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
-import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -88,19 +79,6 @@ class PaymentControllerIntegrationTest {
 
     @MockBean
     private StripePaymentClient stripePaymentClient;
-
-    @TestConfiguration
-    static class KafkaTestConfig {
-        @Bean
-        public ProducerFactory<String, Object> producerFactory(KafkaProperties kafkaProperties,
-                                                               EmbeddedKafkaBroker embeddedKafkaBroker) {
-            Map<String, Object> props = kafkaProperties.buildProducerProperties(null);
-            props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, embeddedKafkaBroker.getBrokersAsString());
-            return new DefaultKafkaProducerFactory<>(props,
-                    new StringSerializer(),
-                    new JsonSerializer<>(JacksonUtils.enhancedObjectMapper()));
-        }
-    }
 
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
