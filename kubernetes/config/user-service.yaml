@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-service-config
+data:
+  SPRING_PROFILES_ACTIVE: "docker"
+  DB_NAME: "userservice"
+  DB_USERNAME: "postgres"
+  DB_SCHEMA: "public"

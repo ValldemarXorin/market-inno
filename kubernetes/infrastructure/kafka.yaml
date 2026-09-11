@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+spec:
+  ports:
+    - port: 9092
+      targetPort: 9092
+      name: broker
+    - port: 9093
+      targetPort: 9093
+      name: controller
+  selector:
+    app: kafka
+  clusterIP: None
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+    spec:
+      containers:
+        - name: kafka
+          image: apache/kafka:3.7.0
+          ports:
+            - containerPort: 9092
+              name: broker
+            - containerPort: 9093
+              name: controller
+          env:
+            - name: KAFKA_NODE_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: KAFKA_NODE_ID
+            - name: KAFKA_PROCESS_ROLES
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: KAFKA_PROCESS_ROLES
+            - name: KAFKA_LISTENERS
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: KAFKA_LISTENERS
+            - name: KAFKA_ADVERTISED_LISTENERS
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: KAFKA_ADVERTISED_LISTENERS
+            - name: KAFKA_CONTROLLER_LISTENER_NAMES
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: KAFKA_CONTROLLER_LISTENER_NAMES
+            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+            - name: KAFKA_CONTROLLER_QUORUM_VOTERS
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: KAFKA_CONTROLLER_QUORUM_VOTERS
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+            - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+            - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+            - name: KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS
+            - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: KAFKA_AUTO_CREATE_TOPICS_ENABLE

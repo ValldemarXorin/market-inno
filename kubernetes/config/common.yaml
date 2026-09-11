@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: common-config
+data:
+  KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+  EUREKA_SERVICE_URL: "http://eureka-server:8761/eureka"

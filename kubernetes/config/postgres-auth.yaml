@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-auth-config
+data:
+  POSTGRES_DB: "auth_service"
+  POSTGRES_USER: "auth_service"
+  DB_HOST: "postgres"
+  DB_PORT: "5432"
+  DB_NAME: "auth_service"
+  DB_USER: "auth_service"
+  JWT_ACCESS_TOKEN_TTL_MINUTES: "15"
+  JWT_REFRESH_TOKEN_TTL_DAYS: "30"
+  REFRESH_TOKEN_BYTE_LENGTH: "64"
+  BCRYPT_STRENGTH: "10"
+  API_VERSION: "/api/v1"
+  SERVER_PORT: "8081"

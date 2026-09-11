@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-service-config
+data:
+  SPRING_PROFILES_ACTIVE: "docker"
+  MONGODB_URI: "mongodb://mongodb:27017/payments"

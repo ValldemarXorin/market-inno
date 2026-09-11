@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      containers:
+        - name: auth-service
+          image: market-inno-auth-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-service-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-service-config
+                  key: DB_PORT
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-service-config
+                  key: DB_NAME
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-service-config
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: AUTH_DB_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: JWT_SECRET
+            - name: JWT_ACCESS_TOKEN_TTL_MINUTES
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-service-config
+                  key: JWT_ACCESS_TOKEN_TTL_MINUTES
+            - name: JWT_REFRESH_TOKEN_TTL_DAYS
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-service-config
+                  key: JWT_REFRESH_TOKEN_TTL_DAYS
+            - name: REFRESH_TOKEN_BYTE_LENGTH
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-service-config
+                  key: REFRESH_TOKEN_BYTE_LENGTH
+            - name: BCRYPT_STRENGTH
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-service-config
+                  key: BCRYPT_STRENGTH
+            - name: API_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-service-config
+                  key: API_VERSION
+            - name: SERVER_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-service-config
+                  key: SERVER_PORT
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              valueFrom:
+                configMapKeyRef:
+                  name: common-config
+                  key: KAFKA_BOOTSTRAP_SERVERS
+            - name: EUREKA_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: common-config
+                  key: EUREKA_SERVICE_URL
