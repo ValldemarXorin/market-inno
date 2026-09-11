@@ -6,4 +6,6 @@ data:
   SPRING_PROFILES_ACTIVE: "docker"
   DB_NAME: "userservice"
   DB_USERNAME: "postgres"
+  DB_HOST: "postgres-user"
+  DB_PORT: "5432"
   DB_SCHEMA: "public"

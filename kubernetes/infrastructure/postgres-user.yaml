@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: postgres-shared-data
+  name: postgres-user-data
 spec:
   accessModes:
     - ReadWriteOnce
@@ -13,28 +13,28 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: postgres-db
+  name: postgres-user
 spec:
   ports:
     - port: 5432
       targetPort: 5432
   selector:
-    app: postgres-shared
+    app: postgres-user
   clusterIP: None
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: postgres-shared
+  name: postgres-user
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: postgres-shared
+      app: postgres-user
   template:
     metadata:
       labels:
-        app: postgres-shared
+        app: postgres-user
     spec:
       containers:
         - name: postgres
@@ -45,12 +45,12 @@ spec:
             - name: POSTGRES_DB
               valueFrom:
                 configMapKeyRef:
-                  name: postgres-shared-config
+                  name: postgres-user-config
                   key: POSTGRES_DB
             - name: POSTGRES_USER
               valueFrom:
                 configMapKeyRef:
-                  name: postgres-shared-config
+                  name: postgres-user-config
                   key: POSTGRES_USER
             - name: POSTGRES_PASSWORD
               valueFrom:
@@ -60,13 +60,7 @@ spec:
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
-            - name: init-script
-              mountPath: /docker-entrypoint-initdb.d
-              readOnly: true
       volumes:
         - name: postgres-data
           persistentVolumeClaim:
-            claimName: postgres-shared-data
-        - name: init-script
-          configMap:
-            name: postgres-shared-init
+            claimName: postgres-user-data

@@ -50,6 +50,16 @@ spec:
                 configMapKeyRef:
                   name: order-service-config
                   key: DB_USERNAME
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: order-service-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: order-service-config
+                  key: DB_PORT
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
