@@ -9,7 +9,7 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface PaymentMapper {
 
-    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "id", expression = "java(java.util.UUID.randomUUID())")
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
