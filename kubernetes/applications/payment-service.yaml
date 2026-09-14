@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+    spec:
+      containers:
+        - name: payment-service
+          image: market-inno-payment-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /api/v1/actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 300
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 10
+          readinessProbe:
+            httpGet:
+              path: /api/v1/actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 240
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 10
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              valueFrom:
+                configMapKeyRef:
+                  name: payment-service-config
+                  key: SPRING_PROFILES_ACTIVE
+            - name: MONGODB_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: payment-service-config
+                  key: MONGODB_URI
+            - name: STRIPE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: STRIPE_SECRET_KEY
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              valueFrom:
+                configMapKeyRef:
+                  name: common-config
+                  key: KAFKA_BOOTSTRAP_SERVERS
+            - name: EUREKA_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: common-config
+                  key: EUREKA_SERVICE_URL
