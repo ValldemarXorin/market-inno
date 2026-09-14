@@ -26,8 +26,9 @@ public class IdentityPropagationFilter implements WebFilter, Ordered {
                 .map(SecurityContext::getAuthentication)
                 .filter(this::hasJwt)
                 .map(authentication -> (Jwt) authentication.getPrincipal())
-                .flatMap(jwt -> chain.filter(withIdentityHeaders(sanitized, jwt)))
-                .switchIfEmpty(chain.filter(sanitized));
+                .map(jwt -> withIdentityHeaders(sanitized, jwt))
+                .defaultIfEmpty(sanitized)
+                .flatMap(exchangeToForward -> chain.filter(exchangeToForward));
     }
 
     private boolean hasJwt(Authentication authentication) {

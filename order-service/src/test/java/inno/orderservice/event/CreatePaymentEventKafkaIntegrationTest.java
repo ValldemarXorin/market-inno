@@ -38,8 +38,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
-@EmbeddedKafka(partitions = 1, topics = {"payment-created-events"})
-class PaymentCreatedEventKafkaIntegrationTest {
+@EmbeddedKafka(partitions = 1, topics = {"create-payment-events"})
+class CreatePaymentEventKafkaIntegrationTest {
 
     @Container
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17")
@@ -65,7 +65,7 @@ class PaymentCreatedEventKafkaIntegrationTest {
     @Autowired
     private EmbeddedKafkaBroker broker;
 
-    @Value("${app.kafka.topic.payment-created:payment-created-events}")
+    @Value("${app.kafka.topic.create-payment:create-payment-events}")
     private String topic;
 
     private UUID orderId;
@@ -93,7 +93,7 @@ class PaymentCreatedEventKafkaIntegrationTest {
         LocalDateTime createdAt = before.getCreatedAt();
 
         kafkaTemplate.send(topic, paymentId.toString(),
-                new PaymentCreatedEvent(paymentId, orderId, PaymentStatus.SUCCESSFUL)).join();
+                new CreatePaymentEvent(paymentId, orderId, PaymentStatus.SUCCESSFUL)).join();
 
         await(() -> orderRepository.findById(orderId).orElseThrow().getStatus() == OrderStatus.COMPLETED);
         Order processed = orderRepository.findById(orderId).orElseThrow();
@@ -102,7 +102,7 @@ class PaymentCreatedEventKafkaIntegrationTest {
         LocalDateTime updatedAfterFirst = processed.getUpdatedAt();
 
         kafkaTemplate.send(topic, paymentId.toString(),
-                new PaymentCreatedEvent(paymentId, orderId, PaymentStatus.SUCCESSFUL)).join();
+                new CreatePaymentEvent(paymentId, orderId, PaymentStatus.SUCCESSFUL)).join();
         Thread.sleep(1500);
 
         Order afterDuplicate = orderRepository.findById(orderId).orElseThrow();
@@ -116,9 +116,9 @@ class PaymentCreatedEventKafkaIntegrationTest {
 
         UUID paymentId = UUID.randomUUID();
         kafkaTemplate.send(topic, paymentId.toString(),
-                new PaymentCreatedEvent(paymentId, orderId, PaymentStatus.SUCCESSFUL)).join();
+                new CreatePaymentEvent(paymentId, orderId, PaymentStatus.SUCCESSFUL)).join();
 
-        awaitEvents(topic, paymentId, PaymentCreatedEvent.class, 1);
+        awaitEvents(topic, paymentId, CreatePaymentEvent.class, 1);
     }
 
     @Test
@@ -127,7 +127,7 @@ class PaymentCreatedEventKafkaIntegrationTest {
         await(() -> orderRepository.findById(orderId).isPresent());
 
         kafkaTemplate.send(topic, paymentId.toString(),
-                new PaymentCreatedEvent(paymentId, orderId, PaymentStatus.UNSUCCESSFUL)).join();
+                new CreatePaymentEvent(paymentId, orderId, PaymentStatus.UNSUCCESSFUL)).join();
 
         await(() -> orderRepository.findById(orderId).orElseThrow().getStatus() == OrderStatus.CANCELLED);
         assertEquals(OrderStatus.CANCELLED, orderRepository.findById(orderId).orElseThrow().getStatus());
@@ -139,7 +139,7 @@ class PaymentCreatedEventKafkaIntegrationTest {
 
         UUID paymentId = UUID.randomUUID();
         kafkaTemplate.send(topic, UUID.randomUUID().toString(),
-                new PaymentCreatedEvent(paymentId, orderId, PaymentStatus.SUCCESSFUL)).join();
+                new CreatePaymentEvent(paymentId, orderId, PaymentStatus.SUCCESSFUL)).join();
 
         Thread.sleep(1500);
         assertEquals(OrderStatus.CREATED, orderRepository.findById(orderId).orElseThrow().getStatus());

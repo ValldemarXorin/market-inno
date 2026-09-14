@@ -7,7 +7,7 @@ import inno.orderservice.entity.Item;
 import inno.orderservice.entity.Order;
 import inno.orderservice.entity.OrderItem;
 import inno.orderservice.entity.OrderStatus;
-import inno.orderservice.event.PaymentCreatedEvent;
+import inno.orderservice.event.CreatePaymentEvent;
 import inno.orderservice.event.PaymentStatus;
 import inno.orderservice.exception.custom_exception.OrderNotFoundException;
 import inno.orderservice.mapper.OrderMapper;
@@ -70,7 +70,7 @@ class OrderServicePaymentProcessingTest {
         when(orderRepository.findById(testOrderId)).thenReturn(Optional.of(testOrder));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        orderService.processPayment(new PaymentCreatedEvent(testPaymentId, testOrderId, PaymentStatus.SUCCESSFUL));
+        orderService.processPayment(new CreatePaymentEvent(testPaymentId, testOrderId, PaymentStatus.SUCCESSFUL));
 
         ArgumentCaptor<Order> orderCaptor = ArgumentCaptor.forClass(Order.class);
         verify(orderRepository).save(orderCaptor.capture());
@@ -82,7 +82,7 @@ class OrderServicePaymentProcessingTest {
         when(orderRepository.findById(testOrderId)).thenReturn(Optional.of(testOrder));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        orderService.processPayment(new PaymentCreatedEvent(testPaymentId, testOrderId, PaymentStatus.UNSUCCESSFUL));
+        orderService.processPayment(new CreatePaymentEvent(testPaymentId, testOrderId, PaymentStatus.UNSUCCESSFUL));
 
         ArgumentCaptor<Order> orderCaptor = ArgumentCaptor.forClass(Order.class);
         verify(orderRepository).save(orderCaptor.capture());
@@ -94,7 +94,7 @@ class OrderServicePaymentProcessingTest {
         testOrder.setStatus(OrderStatus.COMPLETED);
         when(orderRepository.findById(testOrderId)).thenReturn(Optional.of(testOrder));
 
-        orderService.processPayment(new PaymentCreatedEvent(testPaymentId, testOrderId, PaymentStatus.SUCCESSFUL));
+        orderService.processPayment(new CreatePaymentEvent(testPaymentId, testOrderId, PaymentStatus.SUCCESSFUL));
 
         verify(orderRepository, never()).save(any());
         assertEquals(OrderStatus.COMPLETED, testOrder.getStatus());
@@ -105,7 +105,7 @@ class OrderServicePaymentProcessingTest {
         testOrder.setStatus(OrderStatus.CANCELLED);
         when(orderRepository.findById(testOrderId)).thenReturn(Optional.of(testOrder));
 
-        orderService.processPayment(new PaymentCreatedEvent(testPaymentId, testOrderId, PaymentStatus.UNSUCCESSFUL));
+        orderService.processPayment(new CreatePaymentEvent(testPaymentId, testOrderId, PaymentStatus.UNSUCCESSFUL));
 
         verify(orderRepository, never()).save(any());
         assertEquals(OrderStatus.CANCELLED, testOrder.getStatus());
@@ -116,6 +116,6 @@ class OrderServicePaymentProcessingTest {
         when(orderRepository.findById(testOrderId)).thenReturn(Optional.empty());
 
         assertThrows(OrderNotFoundException.class, () -> orderService.processPayment(
-                new PaymentCreatedEvent(testPaymentId, testOrderId, PaymentStatus.SUCCESSFUL)));
+                new CreatePaymentEvent(testPaymentId, testOrderId, PaymentStatus.SUCCESSFUL)));
     }
 }

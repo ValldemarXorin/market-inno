@@ -2,7 +2,7 @@ package inno.orderservice.event;
 
 import java.util.UUID;
 
-public record PaymentCreatedEvent(
+public record CreatePaymentEvent(
         UUID paymentId,
         UUID orderId,
         PaymentStatus status

@@ -1,6 +1,6 @@
 package inno.orderservice.config;
 
-import inno.orderservice.event.PaymentCreatedEvent;
+import inno.orderservice.event.CreatePaymentEvent;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
@@ -40,18 +40,19 @@ public class KafkaConfig {
     }
 
     @Bean
-    public ConsumerFactory<String, PaymentCreatedEvent> consumerFactory(KafkaProperties kafkaProperties) {
+    public ConsumerFactory<String, CreatePaymentEvent> consumerFactory(KafkaProperties kafkaProperties) {
         Map<String, Object> props = kafkaProperties.buildConsumerProperties(null);
-        JsonDeserializer<PaymentCreatedEvent> valueDeserializer =
-                new JsonDeserializer<>(PaymentCreatedEvent.class, JacksonUtils.enhancedObjectMapper());
+        JsonDeserializer<CreatePaymentEvent> valueDeserializer =
+                new JsonDeserializer<>(CreatePaymentEvent.class, JacksonUtils.enhancedObjectMapper());
+        valueDeserializer.addTrustedPackages("inno.paymentservice.event");
         return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), valueDeserializer);
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, PaymentCreatedEvent> kafkaListenerContainerFactory(
-            ConsumerFactory<String, PaymentCreatedEvent> consumerFactory,
+    public ConcurrentKafkaListenerContainerFactory<String, CreatePaymentEvent> kafkaListenerContainerFactory(
+            ConsumerFactory<String, CreatePaymentEvent> consumerFactory,
             KafkaTemplate<String, Object> kafkaTemplate) {
-        ConcurrentKafkaListenerContainerFactory<String, PaymentCreatedEvent> factory =
+        ConcurrentKafkaListenerContainerFactory<String, CreatePaymentEvent> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
 

@@ -6,6 +6,9 @@ spring:
     name: api-gateway
   cloud:
     gateway:
+      httpclient:
+        connect-timeout: 5000
+        response-timeout: 10s
       routes:
         - id: auth-service
           uri: lb://auth-service

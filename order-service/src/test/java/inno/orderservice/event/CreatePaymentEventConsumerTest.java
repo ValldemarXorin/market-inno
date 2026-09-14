@@ -15,42 +15,42 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
-class PaymentCreatedEventConsumerTest {
+class CreatePaymentEventConsumerTest {
 
     @Mock
     private OrderService orderService;
 
     @InjectMocks
-    private PaymentCreatedEventConsumer consumer;
+    private CreatePaymentEventConsumer consumer;
 
     private final UUID paymentId = UUID.randomUUID();
     private final UUID orderId = UUID.randomUUID();
 
     @Test
     void shouldDelegateToOrderServiceWhenKeyMatches() {
-        PaymentCreatedEvent event = new PaymentCreatedEvent(paymentId, orderId, PaymentStatus.SUCCESSFUL);
+        CreatePaymentEvent event = new CreatePaymentEvent(paymentId, orderId, PaymentStatus.SUCCESSFUL);
 
-        consumer.onPaymentCreated(paymentId.toString(), event);
+        consumer.onCreatePayment(paymentId.toString(), event);
 
         verify(orderService).processPayment(event);
     }
 
     @Test
     void shouldRejectEventWhenKeyDoesNotMatchPaymentId() {
-        PaymentCreatedEvent event = new PaymentCreatedEvent(paymentId, orderId, PaymentStatus.SUCCESSFUL);
+        CreatePaymentEvent event = new CreatePaymentEvent(paymentId, orderId, PaymentStatus.SUCCESSFUL);
 
         assertThrows(IllegalArgumentException.class,
-                () -> consumer.onPaymentCreated(UUID.randomUUID().toString(), event));
+                () -> consumer.onCreatePayment(UUID.randomUUID().toString(), event));
 
         verify(orderService, never()).processPayment(any());
     }
 
     @Test
     void shouldRejectEventWhenKeyIsNotValidUuid() {
-        PaymentCreatedEvent event = new PaymentCreatedEvent(paymentId, orderId, PaymentStatus.SUCCESSFUL);
+        CreatePaymentEvent event = new CreatePaymentEvent(paymentId, orderId, PaymentStatus.SUCCESSFUL);
 
         assertThrows(IllegalArgumentException.class,
-                () -> consumer.onPaymentCreated("not-a-uuid", event));
+                () -> consumer.onCreatePayment("not-a-uuid", event));
 
         verify(orderService, never()).processPayment(any());
     }
@@ -58,7 +58,7 @@ class PaymentCreatedEventConsumerTest {
     @Test
     void shouldRejectNullEventPayload() {
         assertThrows(IllegalArgumentException.class,
-                () -> consumer.onPaymentCreated(paymentId.toString(), null));
+                () -> consumer.onCreatePayment(paymentId.toString(), null));
 
         verify(orderService, never()).processPayment(any());
     }

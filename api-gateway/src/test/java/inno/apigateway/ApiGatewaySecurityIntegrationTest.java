@@ -19,7 +19,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class ApiGatewaySecurityIntegrationTest {
+class ApiGatewaySecurityIntegrationTest extends AbstractGatewayIntegrationTest {
 
     @DynamicPropertySource
     static void jwtSecret(DynamicPropertyRegistry registry) {

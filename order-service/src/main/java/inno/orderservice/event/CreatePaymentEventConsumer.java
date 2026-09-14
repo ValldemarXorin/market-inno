@@ -14,17 +14,17 @@ import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
-public class PaymentCreatedEventConsumer {
+public class CreatePaymentEventConsumer {
 
-    private static final Logger log = LoggerFactory.getLogger(PaymentCreatedEventConsumer.class);
+    private static final Logger log = LoggerFactory.getLogger(CreatePaymentEventConsumer.class);
 
     private final OrderService orderService;
 
-    @KafkaListener(topics = "${app.kafka.topic.payment-created:payment-created-events}")
-    public void onPaymentCreated(@Header(KafkaHeaders.RECEIVED_KEY) String paymentId,
-                                 @Payload PaymentCreatedEvent event) {
+    @KafkaListener(topics = "${app.kafka.topic.create-payment:create-payment-events}")
+    public void onCreatePayment(@Header(KafkaHeaders.RECEIVED_KEY) String paymentId,
+                                @Payload CreatePaymentEvent event) {
         if (event == null) {
-            throw new IllegalArgumentException("Payment created event payload is null");
+            throw new IllegalArgumentException("Create payment event payload is null");
         }
 
         UUID keyPaymentId = UUID.fromString(paymentId);
@@ -33,7 +33,7 @@ public class PaymentCreatedEventConsumer {
                     "Kafka key does not match event paymentId: key=" + paymentId + ", event=" + event.paymentId());
         }
 
-        log.info("Received payment created event: paymentId={}, orderId={}, status={}",
+        log.info("Received create payment event: paymentId={}, orderId={}, status={}",
                 event.paymentId(), event.orderId(), event.status());
         orderService.processPayment(event);
     }
